@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/jacky1-jiang-epics-mcp-server-badge.png)](https://mseep.ai/app/jacky1-jiang-epics-mcp-server)
+
 # EPICS-MCP-Server
 [![smithery badge](https://smithery.ai/badge/@Jacky1-Jiang/EPICS-MCP-Server)](https://smithery.ai/server/@Jacky1-Jiang/EPICS-MCP-Server)
 
