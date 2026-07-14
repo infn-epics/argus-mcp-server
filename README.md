@@ -1,7 +1,5 @@
 # ARGUS
 
-[![smithery badge](https://smithery.ai/badge/@Jacky1-Jiang/EPICS-MCP-Server)](https://smithery.ai/server/@Jacky1-Jiang/EPICS-MCP-Server)
-
 ARGUS is an MCP server that gives an AI assistant a **unified operational
 interface** to an accelerator control room — not just EPICS. A single tool
 call like `diagnose_device("QF12")` transparently pulls together live PV
