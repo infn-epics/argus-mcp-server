@@ -1,0 +1,301 @@
+You are a senior software architect with expertise in
+
+- EPICS (Channel Access, pvAccess)
+- Accelerator control systems
+- Kubernetes
+- MCP (Model Context Protocol)
+- Python
+- Async programming
+- LLM tool design
+
+Your task is to evolve the existing INFN epics-mcp-server into the backend of ARGUS, an AI assistant for accelerator control rooms.
+
+The objective is NOT simply exposing EPICS functions as MCP tools.
+
+The objective is to create a unified operational interface capable of accessing all accelerator information through a small set of intelligent tools.
+
+## Existing project
+
+The project already contains an MCP server capable of interacting with EPICS.
+
+Keep compatibility whenever possible.
+
+## Architecture goals
+
+The MCP server must become modular.
+
+Separate the implementation into Providers.
+
+Suggested providers:
+
+providers/
+    epics/
+        channel_access.py
+        pvaccess.py
+
+    archiver/
+        archiver_appliance.py
+
+    channelfinder/
+        channelfinder.py
+
+    kubernetes/
+        kubernetes.py
+
+    argocd/
+        argocd.py
+
+    logbook/
+        logbook.py
+
+    elastic/
+        elasticsearch.py
+
+    documentation/
+        rag.py
+
+Every provider should expose a clean Python interface.
+
+MCP tools should orchestrate providers instead of containing business logic.
+
+Business logic belongs in Service classes.
+
+Suggested layout:
+
+services/
+
+    device_service.py
+
+    diagnostics_service.py
+
+    operations_service.py
+
+    history_service.py
+
+    documentation_service.py
+
+Providers only retrieve data.
+
+Services combine multiple providers.
+
+## MCP philosophy
+
+Avoid creating hundreds of low-level tools.
+
+Instead expose approximately 15-20 high level tools.
+
+Examples:
+
+get_pv()
+
+set_pv()
+
+search_pvs()
+
+get_history()
+
+search_documentation()
+
+get_logs()
+
+list_iocs()
+
+restart_ioc()
+
+beamline_status()
+
+device_status()
+
+diagnose_device()
+
+machine_summary()
+
+execute_procedure()
+
+The LLM should not know which backend is queried.
+
+The tool itself decides whether data comes from:
+
+- EPICS
+- Archiver
+- Kubernetes
+- ChannelFinder
+- Elasticsearch
+- Logbook
+- Documentation
+
+## Device-centric design
+
+The fundamental object is NOT a PV.
+
+The fundamental object is a Device.
+
+Example
+
+Quadrupole QF12
+
+contains
+
+PVs
+
+IOC
+
+Pod
+
+Namespace
+
+Git repository
+
+Documentation
+
+Maintenance history
+
+Alarm history
+
+Archiver history
+
+Network location
+
+Rack
+
+Owner
+
+Everything related to a device should be accessible from one service.
+
+## Diagnostics
+
+Implement high-level diagnostic services.
+
+Example workflow
+
+diagnose_device()
+
+should automatically
+
+discover the IOC
+
+retrieve live PVs
+
+retrieve historical trends
+
+retrieve pod status
+
+retrieve pod logs
+
+retrieve ArgoCD application state
+
+retrieve recent logbook entries
+
+retrieve documentation
+
+produce one structured response
+
+instead of multiple disconnected API calls.
+
+## Async
+
+Use asyncio.
+
+Multiple providers should execute in parallel whenever possible.
+
+Use timeout handling.
+
+Gracefully degrade if one backend is unavailable.
+
+## Caching
+
+Implement TTL caches for
+
+ChannelFinder
+
+Kubernetes
+
+device metadata
+
+Do not cache live PV values.
+
+## Error handling
+
+Return structured errors.
+
+Never expose Python exceptions directly.
+
+Each provider should define its own exception classes.
+
+## Logging
+
+Use structured logging.
+
+Every request should include
+
+request id
+
+provider
+
+latency
+
+backend
+
+status
+
+## Testing
+
+Write unit tests.
+
+Mock every backend.
+
+Tests must not require a running EPICS installation.
+
+## Future extensibility
+
+Design the architecture so new providers can easily be added, for example
+
+Prometheus
+
+Grafana
+
+InfluxDB
+
+Kafka
+
+OpenSearch
+
+AI agents
+
+Digital Twin
+
+without modifying existing services.
+
+## Documentation
+
+Generate
+
+architecture diagrams
+
+class diagrams
+
+provider interfaces
+
+developer documentation
+
+## Coding style
+
+Modern Python
+
+type hints
+
+dataclasses or pydantic where appropriate
+
+dependency injection
+
+small cohesive classes
+
+minimal code duplication
+
+SOLID principles
+
+Do not over-engineer.
+
+Prefer readability over cleverness.
+
+When proposing modifications, explain WHY they improve maintainability and how they support future ARGUS capabilities.

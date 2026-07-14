@@ -1,0 +1,89 @@
+"""ARGUS configuration.
+
+Every provider's settings are entirely optional so the server boots with only
+EPICS configured (today's ``.env``). Absence of a provider's settings is what
+makes ``Provider.is_configured()`` return False for that provider.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class _ProviderSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
+class EpicsSettings(_ProviderSettings):
+    ca_addr_list: str | None = Field(default=None, alias="EPICS_CA_ADDR_LIST")
+    ca_auto_addr_list: bool = Field(default=True, alias="EPICS_CA_AUTO_ADDR_LIST")
+    pva_addr_list: str | None = Field(default=None, alias="EPICS_PVA_ADDR_LIST")
+
+
+class ArchiverSettings(_ProviderSettings):
+    base_url: str | None = Field(default=None, alias="ARCHIVER_BASE_URL")
+
+
+class ChannelFinderSettings(_ProviderSettings):
+    base_url: str | None = Field(default=None, alias="CHANNELFINDER_BASE_URL")
+    username: str | None = Field(default=None, alias="CHANNELFINDER_USERNAME")
+    password: str | None = Field(default=None, alias="CHANNELFINDER_PASSWORD")
+
+
+class KubernetesSettings(_ProviderSettings):
+    kubeconfig_path: str | None = Field(default=None, alias="KUBECONFIG")
+    default_namespace: str = Field(default="default", alias="K8S_NAMESPACE_DEFAULT")
+    ioc_label_selector_template: str = Field(
+        default="app=ioc,device={ioc_name}", alias="K8S_IOC_LABEL_SELECTOR_TEMPLATE"
+    )
+
+
+class ArgoCDSettings(_ProviderSettings):
+    server_url: str | None = Field(default=None, alias="ARGOCD_SERVER_URL")
+    auth_token: str | None = Field(default=None, alias="ARGOCD_AUTH_TOKEN")
+
+
+class LogbookSettings(_ProviderSettings):
+    base_url: str | None = Field(default=None, alias="LOGBOOK_BASE_URL")
+    username: str | None = Field(default=None, alias="LOGBOOK_USERNAME")
+    password: str | None = Field(default=None, alias="LOGBOOK_PASSWORD")
+
+
+class ElasticSettings(_ProviderSettings):
+    url: str | None = Field(default=None, alias="ELASTIC_URL")
+    api_key: str | None = Field(default=None, alias="ELASTIC_API_KEY")
+    default_index: str = Field(default="argus-logs", alias="ELASTIC_DEFAULT_INDEX")
+
+
+class DocumentationSettings(_ProviderSettings):
+    docs_path: str | None = Field(default=None, alias="DOCS_PATH")
+    index_path: str | None = Field(default=None, alias="DOCS_INDEX_PATH")
+
+
+class CacheSettings(_ProviderSettings):
+    device_ttl_seconds: float = Field(default=300.0, alias="CACHE_DEVICE_TTL_SECONDS")
+    channelfinder_ttl_seconds: float = Field(default=120.0, alias="CACHE_CHANNELFINDER_TTL_SECONDS")
+    kubernetes_ttl_seconds: float = Field(default=30.0, alias="CACHE_KUBERNETES_TTL_SECONDS")
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    transport: Literal["stdio", "sse"] = Field(default="stdio", alias="ARGUS_TRANSPORT")
+    sse_host: str = Field(default="127.0.0.1", alias="ARGUS_SSE_HOST")
+    sse_port: int = Field(default=8000, alias="ARGUS_SSE_PORT")
+    log_level: str = Field(default="INFO", alias="ARGUS_LOG_LEVEL")
+    log_json: bool = Field(default=True, alias="ARGUS_LOG_JSON")
+
+    epics: EpicsSettings = Field(default_factory=EpicsSettings)
+    archiver: ArchiverSettings = Field(default_factory=ArchiverSettings)
+    channelfinder: ChannelFinderSettings = Field(default_factory=ChannelFinderSettings)
+    kubernetes: KubernetesSettings = Field(default_factory=KubernetesSettings)
+    argocd: ArgoCDSettings = Field(default_factory=ArgoCDSettings)
+    logbook: LogbookSettings = Field(default_factory=LogbookSettings)
+    elastic: ElasticSettings = Field(default_factory=ElasticSettings)
+    documentation: DocumentationSettings = Field(default_factory=DocumentationSettings)
+    cache: CacheSettings = Field(default_factory=CacheSettings)

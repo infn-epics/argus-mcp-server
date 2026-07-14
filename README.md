@@ -1,121 +1,110 @@
-# EPICS-MCP-Server
+# ARGUS
+
 [![smithery badge](https://smithery.ai/badge/@Jacky1-Jiang/EPICS-MCP-Server)](https://smithery.ai/server/@Jacky1-Jiang/EPICS-MCP-Server)
 
-# Overview
-- The EPICS MCP Server is a Python-based server designed to interact with EPICS (Experimental Physics and Industrial Control System) process variables (PVs). It provides a set of tools to retrieve PV values, set PV values, and fetch detailed information about PVs. The server is built 
-  using the mcp framework and communicates over stdio, making it suitable for integration into larger control systems or workflows.
+ARGUS is an MCP server that gives an AI assistant a **unified operational
+interface** to an accelerator control room — not just EPICS. A single tool
+call like `diagnose_device("QF12")` transparently pulls together live PV
+values, archived trends, Kubernetes pod status, ArgoCD deployment state,
+recent logbook entries, and documentation, and returns one structured
+report. The LLM never needs to know (or ask) which backend answered.
 
-- This tool is particularly useful in environments where EPICS PVs are used for monitoring and controlling hardware or software parameters.
+ARGUS started as a fork of INFN's `epics-mcp-server` (a 3-tool EPICS-only
+proof of concept) and has been rebuilt into a modular
+**provider → service → tool** architecture. See
+[docs/architecture.md](docs/architecture.md) for the full picture.
 
-# Features
-- The EPICS MCP Server provides the following tools:
+## Why not just expose EPICS functions as tools?
 
-1. **get_pv_value**
-   - Create or update a single file in a repository
-   - Inputs:
-     - `pv_name` (string): The name of the PV variable.
-   - Returns: A JSON object containing the status (`success` or `error`) and the retrieved value or an error message.
+Because a control room isn't just PVs. A device like quadrupole QF12 is a
+PV group, an IOC, a Kubernetes pod, a GitOps deployment, a maintenance
+history, and a stack of documentation — and answering "what's wrong with
+QF12?" means correlating all of that. ARGUS exposes ~18 high-level,
+intent-shaped tools instead of hundreds of thin per-backend wrappers; each
+tool decides internally which of EPICS, the Archiver Appliance,
+ChannelFinder, Kubernetes, ArgoCD, Elasticsearch, the electronic logbook, or
+local documentation to query (in parallel, with per-backend timeouts and
+graceful degradation).
 
-2. **set_pv_value**
-   - Set a new value for a specified PV.
-   - Inputs:
-     - `pv_name` (string): The name of the PV variable.
-     - `pv_value` (string): The new value to be set for the PV.
-   - Returns: A JSON object containing the status (`success` or `error`) and a confirmation message or an error message.
+## Quickstart
 
-3. **get_pv_info**
-   - Fetches detailed information about a specified PV.
-   - Inputs:
-     - `pv_name` (string): The name of the PV variable.
-   - Returns: A JSON object containing the status (`success` or `error`) and the detailed information about the PV or an error message.
-
-# Usage with Langchain
-- To use this with Langchain, you must install the dependencies required for the project.
-```python
-pip install -r requirements.txt
+```bash
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env   # at minimum, set EPICS_CA_ADDR_LIST
+.venv/bin/python -m argus --transport stdio
 ```
 
-- ### Langchain
+Every provider besides EPICS is entirely optional — the server boots fine
+with just `EPICS_CA_ADDR_LIST` set; unconfigured providers report themselves
+as `unconfigured` rather than erroring, and `diagnose_device()` still
+returns a graceful partial report. See [.env.example](.env.example) for
+every provider's config, and [docs/providers.md](docs/providers.md) for what
+each one talks to.
 
-```python
-server_params = StdioServerParameters(
-    command="python",
-    # Make sure to update to the full absolute path to your math_server.py file
-    args=["/path/server.py"],
-)
-```
-- ### EPICS
-- Before using the EPCIS mcp server, you must successfully install EPCIS on your local machine, ensure that IOC can start normally, and verify that functions such as `caget`, `caput`, and `cainfo` are working properly. For detailed installation instructions, please refer to [https://epics-controls.org/resources-and-support/base/](https://epics-controls.org/resources-and-support/base/).
-```python
-jiangyan@DESKTOP-84CO9VB:~$ softIoc -d ~/EPICS/DB/test.db
-Starting iocInit
-############################################################################
-## EPICS R7.0.8
-## Rev. 2025-02-13T14:29+0800
-## Rev. Date build date/time:
-############################################################################
-iocRun: All initialization complete
-epics>
-```
-```python
-jiangyan@DESKTOP-84CO9VB:~$ caget temperature:water
-temperature:water              88
-jiangyan@DESKTOP-84CO9VB:~$ caput temperature:water 100
-Old : temperature:water              88
-New : temperature:water              100
-jiangyan@DESKTOP-84CO9VB:~$ cainfo temperature:water
-temperature:water
-    State:            connected
-    Host:             127.0.0.1:5056
-    Access:           read, write
-    Native data type: DBF_DOUBLE
-    Request type:     DBR_DOUBLE
-    Element count:    1
+Serve over SSE instead of stdio:
 
-```
-  
-# Test Result
-- Mcp client:
-```python
-async def run():
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            # Initialize the connection
-            await session.initialize()
-
-            # Get tools
-            tools = await load_mcp_tools(session)
-
-            # Create and run the agent
-            agent = create_react_agent(model, tools)
-            agent_response = await agent.ainvoke({"messages": "To query the value of a PV (Process Variable) named temperature:water"})
-            return agent_response
-)
+```bash
+.venv/bin/python -m argus --transport sse --host 0.0.0.0 --port 8000
 ```
 
+## Backward compatibility
 
+The original 3 tools still exist, unchanged, so existing clients (including
+the example scripts under `test/`) work with zero changes:
 
-- Result:
- ```python
-================================[1m Human Message [0m=================================
+- `get_pv_value(pv_name)` → `{"status": "success", "value": ...}`
+- `set_pv_value(pv_name, pv_value)` → `{"status": "success", "message": ...}`
+- `get_pv_info(pv_name)` → `{"status": "success", "info": {...}}`
 
-To query the value of a PV (Process Variable) named temperature:water
-==================================[1m Ai Message [0m==================================
-Tool Calls:
-  get_pv_value (call_vvbXwi51CyYUxEM0hcyvCFCY)
- Call ID: call_vvbXwi51CyYUxEM0hcyvCFCY
-  Args:
-    pv_name: temperature:water
-=================================[1m Tool Message [0m=================================
-Name: get_pv_value
+`get_pv`/`set_pv` are the new, richer equivalents (include timestamp and
+alarm severity); the legacy names are thin aliases with byte-identical
+input schemas, enforced by
+`tests/tools/test_pv_tools_backward_compat.py`.
 
-{
-  "status": "success",
-  "value": 88.0
-}
-==================================[1m Ai Message [0m==================================
+## Tools
 
-The current value of the PV named `temperature:water` is 88.0.
+| Tool | What it does |
+|---|---|
+| `get_pv` / `set_pv` / `get_pv_info` | Read/write/inspect a single PV |
+| `get_pv_value` / `set_pv_value` | Legacy aliases of `get_pv`/`set_pv` |
+| `search_pvs` | Search PVs/channels by name, tag, or property (ChannelFinder) |
+| `get_device` | Full device metadata: PVs, IOC, pod, namespace, rack, owner, docs |
+| `device_status` | Quick health snapshot: live PVs + pod status |
+| `diagnose_device` | Full cross-system diagnostic report, one call |
+| `beamline_status` | Aggregate status across a group of devices |
+| `get_history` | Historical trend data for a PV (Archiver Appliance) |
+| `get_alarm_history` | Recent alarm-tagged logbook entries for a device |
+| `get_logs` | Search historical application/IOC logs (Elasticsearch) |
+| `list_iocs` | List IOCs and their Kubernetes pod status |
+| `restart_ioc` | Restart an IOC's pod |
+| `machine_summary` | Machine-wide IOC health + recent alarm counts |
+| `execute_procedure` | Run a named, pre-approved operational procedure (scaffolded; no procedures ship yet — see [ADR context](docs/adr/)) |
+| `search_documentation` | Search technical documentation (local TF-IDF by default) |
+
+## Development
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest
 ```
 
+Tests never require a running EPICS/Kubernetes/ArgoCD/etc. instance — every
+backend is mocked. See [docs/developer-guide.md](docs/developer-guide.md)
+for how to add a new provider or tool, and
+[docs/class-diagram.md](docs/class-diagram.md) for the object model.
 
+## EPICS Channel Access, for local testing
+
+```bash
+softIoc -d ~/EPICS/DB/test.db
+caget temperature:water
+caput temperature:water 100
+```
+
+then point ARGUS at it with `EPICS_CA_ADDR_LIST=127.0.0.1` in `.env`.
+
+## Deploying
+
+- **Docker**: `docker build -t argus .` — runs `python -m argus --transport stdio` by default; override the command for SSE.
+- **Smithery**: `smithery.yaml` launches `python -m argus --transport stdio`.

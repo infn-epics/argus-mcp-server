@@ -5,7 +5,7 @@ startCommand:
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
-    (config) => ({ command: 'python', args: ['-u', 'src/epics-mcp-server/server_by_stdio.py'], env: {} })
+    (config) => ({ command: 'python', args: ['-u', '-m', 'argus', '--transport', 'stdio'], env: {} })
   configSchema:
     # JSON Schema defining the configuration options for the MCP.
     type: object

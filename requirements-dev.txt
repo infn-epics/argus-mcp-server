@@ -1,0 +1,12 @@
+-r requirements.txt
+
+pytest
+pytest-asyncio
+pytest-mock
+respx
+
+# Only needed by the illustrative langchain client scripts under test/
+langchain-mcp-adapters
+langgraph
+langchain
+langchain_openai
