@@ -67,6 +67,25 @@ async def test_devfunc_classified_by_name_within_mag_group():
     assert devices["DHRTB101"].devfunc == "DIP"
 
 
+async def test_key_pvs_populated_for_mag_devices_from_iocprefix_and_name():
+    service = BeamlineInventoryService(knowledge=_FakeKnowledge())
+    devices = {d.name: d for d in await service.list_devices("https://example.git")}
+    assert devices["QUATM002"].key_pvs == {
+        "current_setpoint": "BTF:MAG:DANFYSIK:QUATM002:CURRENT_SP",
+        "current_readback": "BTF:MAG:DANFYSIK:QUATM002:CURRENT_RB",
+        "state_setpoint": "BTF:MAG:DANFYSIK:QUATM002:STATE_SP",
+        "state_readback": "BTF:MAG:DANFYSIK:QUATM002:STATE_RB",
+    }
+
+
+async def test_key_pvs_empty_for_devgroup_without_a_profile():
+    service = BeamlineInventoryService(knowledge=_FakeKnowledge())
+    devices = {d.name: d for d in await service.list_devices("https://example.git")}
+    slt = devices["SLTTB004R"]
+    assert slt.devgroup == "mot"
+    assert slt.key_pvs == {}
+
+
 async def test_explicit_ioc_level_devgroup_without_template():
     service = BeamlineInventoryService(knowledge=_FakeKnowledge())
     devices = await service.list_devices("https://example.git")

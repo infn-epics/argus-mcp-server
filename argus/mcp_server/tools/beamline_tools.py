@@ -75,11 +75,15 @@ TOOLS = [
             "'template' and inherit devgroup/devtype from iocDefaults[template] rather than setting it "
             "directly, so reading the raw file yourself and grep-ing for devgroup will undercount. Each "
             "device also gets a devfunc classification within its devgroup (e.g. QUA/COR/DIP/SOL within "
-            "'mag') derived the same way the control-room OPI console does it. Filter with devgroup/"
-            "devfunc/zone, or omit them to list everything. For raw file content, history, or metadata "
-            "this doesn't model (asset links, IOC-level params, template names), use get_config_history "
-            "instead; for live PV values/status of a device found here, use "
-            "get_device/device_status/diagnose_device."
+            "'mag') derived the same way the control-room OPI console does it. Each device also includes "
+            "key_pvs: a role -> exact PV name map for that device type's important setpoint/readback PVs "
+            "(e.g. a 'mag' device's key_pvs has current_setpoint/current_readback/state_setpoint/"
+            "state_readback) — for 'what's the current/status of this power supply' questions, read the "
+            "PV name straight from key_pvs and call get_pv/get_pv_value on it directly; do not guess or "
+            "search for the PV name. key_pvs is empty for device types with no registered convention yet. "
+            "Filter with devgroup/devfunc/zone, or omit them to list everything. For raw file content, "
+            "history, or metadata this doesn't model (asset links, IOC-level params, template names), use "
+            "get_config_history instead."
         ),
         input_schema=_LIST_DEVICES_SCHEMA,
         handler=_list_beamline_devices,

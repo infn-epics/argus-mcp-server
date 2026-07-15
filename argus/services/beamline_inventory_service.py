@@ -12,38 +12,24 @@ This mirrors the merge-then-classify logic already used by the Phoebus OPI
 console's own config loader (epik8s-btf/opi/epik8s-opi/Scripts/epik8sutil.py:
 _merge_ioc_defaults + the devgroup/devfunc rules in conf_to_dev), so ARGUS
 and the control-room OPIs agree on what counts as e.g. a quadrupole.
+
+Per-devgroup classification and key-PV-suffix conventions (what counts as a
+quadrupole, which PV suffix holds a magnet's current readback, ...) live in
+services/device_types/ -- a small per-device-type module each, not one big
+table here, so adding/enriching a device type never touches this parser.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
 from argus.core.errors import ArgusError
+from argus.services.device_types import get_profile
 from argus.services.knowledge_service import KnowledgeService
 
 DEFAULT_INVENTORY_PATH = "deploy/values.yaml"
-
-# devgroup == "mag" name substrings -> devfunc, checked in this order.
-_MAG_DEVFUNC_RULES: list[tuple[tuple[str, ...], str]] = [
-    (("HCV", "HCOR", "VCOR", "HCR", "VCR", "CHH", "CVV"), "COR"),
-    (("QUA", "QUAD", "QSK"), "QUA"),
-    (("DIP", "DPL", "DHS", "DHR", "DHP"), "DIP"),
-    (("SOL",), "SOL"),
-    (("SEX",), "SEX"),
-    (("UFS",), "UFS"),
-]
-
-# devgroup == "mot" name/iocprefix substrings -> devfunc. "MOT" is the
-# fallback devfunc for any mot-group device that matches none of these.
-_MOT_DEVFUNC_RULES: list[tuple[tuple[str, ...], str]] = [
-    (("SLT",), "SLT"),
-    (("FLG",), "FLG"),
-    (("MIR",), "MIR"),
-    (("HMOT",), "HMOT"),
-    (("VMOT",), "VMOT"),
-]
 
 
 class BeamlineInventoryError(ArgusError):
@@ -63,6 +49,10 @@ class BeamlineDevice:
     asset: str | None = None
     opi: str | None = None
     template: str | None = None
+    # role name (e.g. "current_readback") -> full PV name, from the
+    # device's devgroup profile (services/device_types/). Empty if the
+    # devgroup has no registered profile or key PVs yet.
+    key_pvs: dict[str, str] = field(default_factory=dict)
 
 
 def _merge_ioc_defaults(ioc_defaults: dict, ioc: dict) -> dict:
@@ -91,22 +81,6 @@ def _device_zones(ioc: dict, dev: dict) -> list[str]:
             zones.append(ioc_zone_raw)
         return zones
     return _normalize_zones(ioc_zone_raw)
-
-
-def _derive_devfunc(devgroup: str | None, name: str, iocprefix: str) -> str | None:
-    if devgroup == "mag":
-        for substrings, devfunc in _MAG_DEVFUNC_RULES:
-            if any(s in name for s in substrings):
-                return devfunc
-        return None
-    if devgroup == "mot":
-        for substrings, devfunc in _MOT_DEVFUNC_RULES:
-            if any(s in name or s in iocprefix for s in substrings):
-                return devfunc
-        return "MOT"
-    if devgroup == "vac" and "SIP" in name:
-        return "ion"
-    return None
 
 
 class BeamlineInventoryService:
@@ -142,12 +116,16 @@ class BeamlineInventoryService:
             ioc_opi = ioc.get("opi")
             template = ioc.get("template")
 
+            profile = get_profile(ioc_devgroup)
+
             for dev in ioc.get("devices", []):
                 name = dev.get("alias") or dev.get("name")
                 if not name:
                     continue
                 dev_devtype = dev.get("devtype", ioc_devtype)
-                dev_devfunc = dev.get("devfunc") or _derive_devfunc(ioc_devgroup, name, iocprefix)
+                dev_devfunc = dev.get("devfunc") or (
+                    profile.derive_devfunc(name, iocprefix) if profile else None
+                )
 
                 device = BeamlineDevice(
                     name=name,
@@ -161,6 +139,7 @@ class BeamlineInventoryService:
                     asset=dev.get("asset", ioc_asset),
                     opi=dev.get("opi", ioc_opi),
                     template=template,
+                    key_pvs=profile.key_pvs(iocprefix, name) if profile else {},
                 )
 
                 if devgroup and device.devgroup != devgroup:
