@@ -7,6 +7,7 @@ adapter so operations_service can fall back to this transparently.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, ClassVar
 
 from argus.config.settings import EpicsSettings
@@ -62,7 +63,7 @@ class PvAccessProvider:
         self._require_configured()
         ctx = self._get_context()
         try:
-            result = await ctx.get(pv_name, timeout=timeout)
+            result = await asyncio.wait_for(ctx.get(pv_name), timeout=timeout)
         except TimeoutError as exc:
             raise EpicsTimeoutError(f"Timeout while getting PV '{pv_name}' over pvAccess") from exc
         except Exception as exc:  # noqa: BLE001 - p4p raises various RemoteError subtypes
@@ -80,7 +81,7 @@ class PvAccessProvider:
         self._require_configured()
         ctx = self._get_context()
         try:
-            await ctx.put(pv_name, value, timeout=timeout)
+            await asyncio.wait_for(ctx.put(pv_name, value), timeout=timeout)
         except TimeoutError as exc:
             raise EpicsTimeoutError(f"Timeout while setting PV '{pv_name}' over pvAccess") from exc
         except Exception as exc:  # noqa: BLE001
@@ -92,7 +93,7 @@ class PvAccessProvider:
         self._require_configured()
         ctx = self._get_context()
         try:
-            result = await ctx.get(pv_name, timeout=timeout)
+            result = await asyncio.wait_for(ctx.get(pv_name), timeout=timeout)
         except TimeoutError as exc:
             raise EpicsTimeoutError(f"Timeout while getting info for PV '{pv_name}' over pvAccess") from exc
         except Exception as exc:  # noqa: BLE001
@@ -108,10 +109,13 @@ class PvAccessProvider:
     async def get_many(self, pv_names: list[str], timeout: float = 5.0) -> list[PVValue]:
         self._require_configured()
         ctx = self._get_context()
-        try:
-            results = await ctx.get(pv_names, timeout=timeout, throw=False)
-        except TimeoutError as exc:
-            raise EpicsTimeoutError("Timeout while getting multiple PVs over pvAccess") from exc
+        # p4p's own list-form ctx.get() gathers without return_exceptions=True,
+        # so one failing PV would fail the whole batch -- gather individually
+        # instead, so each PV degrades to "disconnected" on its own.
+        results = await asyncio.gather(
+            *(asyncio.wait_for(ctx.get(name), timeout=timeout) for name in pv_names),
+            return_exceptions=True,
+        )
 
         values: list[PVValue] = []
         for name, result in zip(pv_names, results, strict=True):
