@@ -100,13 +100,18 @@ TOOLS = [
     ToolDefinition(
         name="get_config_history",
         description=(
-            "Read a config file from a beamline's deployment repo (pass ref='HEAD' for its current "
-            "content), its git commit history, or a specific commit's diff. This is the source of truth "
-            "for IOC/device inventory, zones, geo coordinates, devgroup/devtype classification (e.g. "
-            "'mag' for magnets), and connection IPs/ports — e.g. deploy/values.yaml in a beamline's "
-            "epik8s-btf-style repo. For live PV values/status of a device you already know the name of, "
-            "use get_device/device_status/diagnose_device instead; ChannelFinder only resolves a known "
-            "device name to its PVs, it doesn't enumerate devices by category."
+            "CALL THIS FIRST for any question about what exists on a beamline — it's the starting point "
+            "for orientation before reaching for live-data tools. Read a config file from a beamline's "
+            "deployment repo (pass ref='HEAD' for its current content), its git commit history, or a "
+            "specific commit's diff. This is the source of truth for essentially all static beamline "
+            "metadata: IOCs, devices, zones, device type/function (devgroup/devtype, e.g. 'mag' for "
+            "magnets), the associations between devices and their IOC/template/beamline, connection "
+            "details (IPs, ports, servers), geo coordinates, asset/documentation links, and any other "
+            "per-device or per-IOC configuration — e.g. deploy/values.yaml in a beamline's epik8s-btf-"
+            "style repo. Only once you know the specific device names from this should you reach for "
+            "live-data tools: get_device/device_status/diagnose_device for live PV values/status, or "
+            "search_pvs to resolve a specific already-known PV — ChannelFinder doesn't enumerate devices "
+            "by category or carry this static metadata, it only resolves a known device name to its PVs."
         ),
         input_schema=_CONFIG_HISTORY_SCHEMA,
         handler=_get_config_history,

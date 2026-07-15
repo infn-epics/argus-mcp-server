@@ -112,7 +112,13 @@ TOOLS = [
     ),
     ToolDefinition(
         name="beamline_status",
-        description="Aggregate status across all devices matching a beamline/device-group name.",
+        description=(
+            "Live status rollup (PVs + pod health) for devices whose ChannelFinder channel name matches "
+            "'beamline' — this is a live-data fan-out over already-identified devices, and a broad match "
+            "can be slow. It does not answer 'what devices/quadrupoles/magnets exist in this beamline or "
+            "zone' — for that, use get_config_history on the beamline's deploy/values.yaml (zones, "
+            "devgroup, devtype list the actual inventory) to find the specific device names first."
+        ),
         input_schema=_BEAMLINE_SCHEMA,
         handler=_beamline_status,
     ),
