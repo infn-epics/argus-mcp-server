@@ -64,9 +64,14 @@ TOOLS = [
     ToolDefinition(
         name="list_beamline_devices",
         description=(
-            "CALL THIS FIRST for 'what magnets/quadrupoles/vacuum devices/etc. exist on this beamline or "
-            "zone' questions. Returns the beamline's device inventory parsed from its epik8s-style deploy "
-            "YAML, with iocDefaults template values already merged in — many IOCs only declare a "
+            "THE DEFAULT, FIRST TOOL for any question involving IOCs, devices, device names, device "
+            "types, zones, or device groups (magnets/mag, vacuum/vac, motors/mot, cameras/cam, "
+            "diagnostics/diag) — e.g. 'what magnets/quadrupoles/vacuum devices exist on this beamline or "
+            "zone'. This is the main source of information: it is on the YAML, not in PV search. Do not "
+            "call search_pvs or beamline_status first and do not retry them repeatedly hoping for a "
+            "different result — if the question is about what exists rather than a live PV value, call "
+            "this tool first, once. Returns the beamline's device inventory parsed from its epik8s-style "
+            "deploy YAML, with iocDefaults template values already merged in — many IOCs only declare a "
             "'template' and inherit devgroup/devtype from iocDefaults[template] rather than setting it "
             "directly, so reading the raw file yourself and grep-ing for devgroup will undercount. Each "
             "device also gets a devfunc classification within its devgroup (e.g. QUA/COR/DIP/SOL within "

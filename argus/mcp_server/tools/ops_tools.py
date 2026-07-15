@@ -85,12 +85,13 @@ TOOLS = [
     ToolDefinition(
         name="search_pvs",
         description=(
-            "Search PVs/channels already registered in ChannelFinder by name pattern, tag, or property. "
-            "This does not enumerate devices by category or beamline/zone (e.g. 'all quadrupoles in "
-            "BTF1') — ChannelFinder's naming/tagging doesn't necessarily match device-type words. To "
-            "discover what devices exist in a beamline/zone (including their type, e.g. magnets, "
-            "quadrupoles), use list_beamline_devices first; use search_pvs afterwards only to resolve "
-            "specific already-known PVs."
+            "DO NOT use this to discover devices, IOCs, zones, or device types (e.g. 'magnets in BTF1', "
+            "'what quadrupoles exist') — use list_beamline_devices for that, every time, first. Only use "
+            "search_pvs when a specific PV name/tag/property is already what's being asked about (e.g. "
+            "'find the PV for QUATB002's current readback'). ChannelFinder's channel naming/tagging does "
+            "not correspond to device-type words like 'magnet' or 'quadrupole', so using this tool for "
+            "discovery returns wrong/empty results — it searches PVs already registered in ChannelFinder "
+            "by name pattern, tag, or property, nothing else."
         ),
         input_schema=_SEARCH_PVS_SCHEMA,
         handler=_search_pvs,

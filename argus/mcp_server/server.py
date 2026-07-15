@@ -33,6 +33,10 @@ SERVER_NAME = "argus"
 
 def build_registry() -> ToolRegistry:
     registry = ToolRegistry()
+    # beamline_tools first: list_beamline_devices is the intended first call
+    # for most device/IOC/zone questions, and tool list position can bias
+    # model tool-selection priority, not just the description text.
+    registry.register_many(BEAMLINE_TOOLS)
     registry.register_many(PV_TOOLS)
     registry.register_many(DEVICE_TOOLS)
     registry.register_many(HISTORY_TOOLS)
@@ -40,7 +44,6 @@ def build_registry() -> ToolRegistry:
     registry.register_many(LOGS_TOOLS)
     registry.register_many(DOCS_TOOLS)
     registry.register_many(KNOWLEDGE_TOOLS)
-    registry.register_many(BEAMLINE_TOOLS)
     return registry
 
 
