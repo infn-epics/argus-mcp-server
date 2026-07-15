@@ -5,6 +5,7 @@ import respx
 from argus.config.settings import RagflowSettings
 from argus.providers.documentation.exceptions import (
     DocumentationQueryError,
+    DocumentationTimeoutError,
     DocumentationUnavailableError,
     DocumentationUnconfiguredError,
 )
@@ -84,3 +85,31 @@ async def test_unexpected_response_shape_raises_query_error():
     respx.post("http://ragflow.test/api/v1/retrieval").mock(return_value=httpx.Response(200, json={"data": {}}))
     with pytest.raises(DocumentationQueryError):
         await provider.search("quadrupole")
+
+
+def test_default_timeout_is_20_seconds():
+    provider = _configured()
+    assert provider._settings.timeout_seconds == 20.0
+
+
+@respx.mock
+async def test_slow_backend_raises_timeout_error():
+    provider = _configured()
+    respx.post("http://ragflow.test/api/v1/retrieval").mock(side_effect=httpx.TimeoutException("timed out"))
+    with pytest.raises(DocumentationTimeoutError):
+        await provider.search("quadrupole")
+
+
+@respx.mock
+async def test_timeout_configurable_via_settings():
+    provider = RagflowDocumentationProvider(
+        RagflowSettings(
+            _env_file=None,
+            RAGFLOW_BASE_URL="http://ragflow.test",
+            RAGFLOW_API_KEY="secret",
+            RAGFLOW_TIMEOUT_SECONDS=5,
+        )
+    )
+    assert provider._settings.timeout_seconds == 5
+    respx.post("http://ragflow.test/api/v1/retrieval").mock(return_value=httpx.Response(200, json={"data": {"chunks": []}}))
+    await provider.search("quadrupole")

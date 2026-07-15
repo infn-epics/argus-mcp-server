@@ -67,8 +67,11 @@ class RagflowSettings(_ProviderSettings):
     base_url: str | None = Field(default=None, alias="RAGFLOW_BASE_URL")
     api_key: str | None = Field(default=None, alias="RAGFLOW_API_KEY")
     # Comma-separated dataset IDs to search. Left unset, the query searches
-    # every dataset the API key can access.
+    # every dataset the API key can access -- slower (embedding+rerank over
+    # a wider corpus), so timeout_seconds defaults higher than a scoped
+    # search would need.
     dataset_ids: str | None = Field(default=None, alias="RAGFLOW_DATASET_IDS")
+    timeout_seconds: float = Field(default=20.0, alias="RAGFLOW_TIMEOUT_SECONDS")
 
 
 class GitHubSettings(_ProviderSettings):

@@ -63,8 +63,9 @@ class RagflowDocumentationProvider:
         # RAGFLOW manages its own ingestion/indexing; nothing for ARGUS to do.
         pass
 
-    async def search(self, query: str, top_k: int = 5, *, timeout: float = 8.0) -> list[DocSearchResult]:
+    async def search(self, query: str, top_k: int = 5, *, timeout: float | None = None) -> list[DocSearchResult]:
         self._require_configured()
+        timeout = timeout if timeout is not None else self._settings.timeout_seconds
         body: dict = {"question": query, "page_size": top_k}
         if self._settings.dataset_ids:
             body["dataset_ids"] = [d.strip() for d in self._settings.dataset_ids.split(",") if d.strip()]
