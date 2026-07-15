@@ -42,6 +42,15 @@ _CONFIG_HISTORY_SCHEMA = {
             "type": "string",
             "description": "If given, return this commit's diff instead of the file's commit history.",
         },
+        "ref": {
+            "type": "string",
+            "description": (
+                "If given (e.g. 'HEAD' for the current version, or a branch/tag/commit sha), return the "
+                "file's full content at that ref instead of its commit history. Use this to read the "
+                "current beamline inventory (IOCs, devices, zones, geo, devgroup/devtype, connection IPs) "
+                "straight out of a config file like deploy/values.yaml."
+            ),
+        },
     },
     "required": ["repo", "path"],
 }
@@ -71,6 +80,11 @@ async def _get_config_history(arguments: dict[str, Any], ctx: AppContext) -> dic
         diff = await ctx.knowledge_service.get_commit_diff(repo, commit_sha)
         return {"commit_sha": commit_sha, "diff": [dataclasses.asdict(d) for d in diff]}
 
+    ref = arguments.get("ref")
+    if ref:
+        file = await ctx.knowledge_service.get_file(repo, path, ref)
+        return dataclasses.asdict(file)
+
     limit = arguments.get("limit", 20)
     history = await ctx.knowledge_service.get_config_history(repo, path, limit=limit)
     return {"history": [dataclasses.asdict(c) for c in history]}
@@ -85,7 +99,15 @@ TOOLS = [
     ),
     ToolDefinition(
         name="get_config_history",
-        description="Git commit history for a config file (e.g. deploy/values.yaml), or a specific commit's diff.",
+        description=(
+            "Read a config file from a beamline's deployment repo (pass ref='HEAD' for its current "
+            "content), its git commit history, or a specific commit's diff. This is the source of truth "
+            "for IOC/device inventory, zones, geo coordinates, devgroup/devtype classification (e.g. "
+            "'mag' for magnets), and connection IPs/ports — e.g. deploy/values.yaml in a beamline's "
+            "epik8s-btf-style repo. For live PV values/status of a device you already know the name of, "
+            "use get_device/device_status/diagnose_device instead; ChannelFinder only resolves a known "
+            "device name to its PVs, it doesn't enumerate devices by category."
+        ),
         input_schema=_CONFIG_HISTORY_SCHEMA,
         handler=_get_config_history,
     ),
