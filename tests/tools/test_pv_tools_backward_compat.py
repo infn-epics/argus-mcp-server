@@ -99,5 +99,10 @@ async def test_registered_tool_names_are_unique():
 async def test_tool_count_is_within_high_level_target_band():
     registry = build_registry()
     # ~15-20 high-level tools per the ARGUS design goal — not hundreds of
-    # low-level per-backend tools.
-    assert 15 <= len(registry.list_tools()) <= 20
+    # low-level per-backend tools. Explicitly over by one (21) as of
+    # list_beamline_devices: answering "what magnets/quadrupoles exist on
+    # this beamline" reliably requires parsing+classifying the beamline YAML
+    # (iocDefaults template inheritance), which get_config_history's raw
+    # file content can't do on its own — a real, distinct capability, not
+    # scope creep, so the band is widened by one rather than silently upped.
+    assert 15 <= len(registry.list_tools()) <= 21

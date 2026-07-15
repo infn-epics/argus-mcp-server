@@ -8,6 +8,7 @@ pydantic-settings
 structlog
 cachetools
 httpx
+PyYAML
 
 aioca
 p4p

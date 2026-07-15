@@ -25,6 +25,7 @@ from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.git.github import GitHubProvider
 from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.services.beamline_inventory_service import BeamlineInventoryService
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
 from argus.services.documentation_service import DocumentationService
@@ -60,6 +61,7 @@ class AppContext:
     history_service: HistoryService
     documentation_service: DocumentationService
     knowledge_service: KnowledgeService
+    beamline_inventory_service: BeamlineInventoryService
 
     @classmethod
     def build(cls, settings: Settings | None = None) -> AppContext:
@@ -111,6 +113,7 @@ class AppContext:
         knowledge_service = KnowledgeService(
             github=github, gitlab=gitlab, default_repos=default_repos, cache=knowledge_cache
         )
+        beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
 
         return cls(
             settings=settings,
@@ -135,4 +138,5 @@ class AppContext:
             history_service=history_service,
             documentation_service=documentation_service,
             knowledge_service=knowledge_service,
+            beamline_inventory_service=beamline_inventory_service,
         )

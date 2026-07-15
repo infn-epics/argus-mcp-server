@@ -79,6 +79,9 @@ input schemas, enforced by
 | `machine_summary` | Machine-wide IOC health + recent alarm counts |
 | `execute_procedure` | Run a named, pre-approved operational procedure (scaffolded; no procedures ship yet — see [ADR context](docs/adr/)) |
 | `search_documentation` | Search technical documentation (local TF-IDF by default, or RAGFLOW — see [providers.md](docs/providers.md)) |
+| `list_beamline_devices` | Structured device inventory (IOCs, zones, devgroup/devfunc) parsed from a beamline's deploy YAML |
+| `get_config_history` | Read a beamline config file's current content, git history, or a commit's diff (GitHub/GitLab) |
+| `search_knowledge_base` | Search issues/tickets across configured repos for past problems and resolutions (GitHub/GitLab) |
 
 ## Development
 

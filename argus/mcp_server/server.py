@@ -16,6 +16,7 @@ from argus.__about__ import __version__
 from argus.config.logging import configure_logging
 from argus.config.settings import Settings
 from argus.core.context import AppContext
+from argus.mcp_server.tools.beamline_tools import TOOLS as BEAMLINE_TOOLS
 from argus.mcp_server.tools.device_tools import TOOLS as DEVICE_TOOLS
 from argus.mcp_server.tools.docs_tools import TOOLS as DOCS_TOOLS
 from argus.mcp_server.tools.history_tools import TOOLS as HISTORY_TOOLS
@@ -39,6 +40,7 @@ def build_registry() -> ToolRegistry:
     registry.register_many(LOGS_TOOLS)
     registry.register_many(DOCS_TOOLS)
     registry.register_many(KNOWLEDGE_TOOLS)
+    registry.register_many(BEAMLINE_TOOLS)
     return registry
 
 

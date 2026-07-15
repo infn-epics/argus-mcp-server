@@ -88,9 +88,9 @@ TOOLS = [
             "Search PVs/channels already registered in ChannelFinder by name pattern, tag, or property. "
             "This does not enumerate devices by category or beamline/zone (e.g. 'all quadrupoles in "
             "BTF1') — ChannelFinder's naming/tagging doesn't necessarily match device-type words. To "
-            "discover what devices exist in a beamline/zone (including their type, e.g. magnets), use "
-            "get_config_history on the beamline's deploy/values.yaml first (zones, devgroup, devtype are "
-            "all listed there); use search_pvs afterwards only to resolve specific already-known PVs."
+            "discover what devices exist in a beamline/zone (including their type, e.g. magnets, "
+            "quadrupoles), use list_beamline_devices first; use search_pvs afterwards only to resolve "
+            "specific already-known PVs."
         ),
         input_schema=_SEARCH_PVS_SCHEMA,
         handler=_search_pvs,

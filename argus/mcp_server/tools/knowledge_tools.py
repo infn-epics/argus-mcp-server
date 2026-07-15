@@ -100,18 +100,17 @@ TOOLS = [
     ToolDefinition(
         name="get_config_history",
         description=(
-            "CALL THIS FIRST for any question about what exists on a beamline — it's the starting point "
-            "for orientation before reaching for live-data tools. Read a config file from a beamline's "
-            "deployment repo (pass ref='HEAD' for its current content), its git commit history, or a "
-            "specific commit's diff. This is the source of truth for essentially all static beamline "
-            "metadata: IOCs, devices, zones, device type/function (devgroup/devtype, e.g. 'mag' for "
-            "magnets), the associations between devices and their IOC/template/beamline, connection "
-            "details (IPs, ports, servers), geo coordinates, asset/documentation links, and any other "
-            "per-device or per-IOC configuration — e.g. deploy/values.yaml in a beamline's epik8s-btf-"
-            "style repo. Only once you know the specific device names from this should you reach for "
-            "live-data tools: get_device/device_status/diagnose_device for live PV values/status, or "
-            "search_pvs to resolve a specific already-known PV — ChannelFinder doesn't enumerate devices "
-            "by category or carry this static metadata, it only resolves a known device name to its PVs."
+            "Read a config file from a beamline's deployment repo (pass ref='HEAD' for its current "
+            "content), its git commit history, or a specific commit's diff — the source of truth for "
+            "static beamline metadata: IOCs, devices, zones, connection details (IPs, ports, servers), "
+            "geo coordinates, asset/documentation links, and other per-device/per-IOC configuration, e.g. "
+            "deploy/values.yaml in a beamline's epik8s-btf-style repo. For 'what magnets/quadrupoles/"
+            "vacuum devices/etc. exist on this beamline' specifically, use list_beamline_devices instead "
+            "— it parses and classifies this same file for you (including iocDefaults template "
+            "inheritance, which a raw read of this file will miss). For live PV values/status of a "
+            "device you already know the name of, use get_device/device_status/diagnose_device instead; "
+            "ChannelFinder only resolves a known device name to its PVs, it doesn't enumerate devices by "
+            "category or carry this static metadata."
         ),
         input_schema=_CONFIG_HISTORY_SCHEMA,
         handler=_get_config_history,

@@ -35,6 +35,7 @@ from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
 from argus.services.documentation_service import DocumentationService
 from argus.services.history_service import HistoryService
+from argus.services.beamline_inventory_service import BeamlineInventoryService
 from argus.services.knowledge_service import KnowledgeService
 from argus.services.operations_service import OperationsService, ProcedureRegistry
 
@@ -129,6 +130,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
     documentation_service = DocumentationService(documentation=documentation)
     knowledge_service = KnowledgeService(github=github, gitlab=gitlab, cache=knowledge_cache)
+    beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
 
     return AppContext(
         settings=settings,
@@ -153,4 +155,5 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         history_service=history_service,
         documentation_service=documentation_service,
         knowledge_service=knowledge_service,
+        beamline_inventory_service=beamline_inventory_service,
     )
