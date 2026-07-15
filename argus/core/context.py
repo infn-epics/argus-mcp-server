@@ -52,6 +52,7 @@ class AppContext:
     device_cache: AsyncTTLCache
     channelfinder_cache: AsyncTTLCache
     kubernetes_cache: AsyncTTLCache
+    knowledge_cache: AsyncTTLCache
 
     device_service: DeviceService
     diagnostics_service: DiagnosticsService
@@ -83,6 +84,7 @@ class AppContext:
         device_cache = AsyncTTLCache(ttl=settings.cache.device_ttl_seconds)
         channelfinder_cache = AsyncTTLCache(ttl=settings.cache.channelfinder_ttl_seconds)
         kubernetes_cache = AsyncTTLCache(ttl=settings.cache.kubernetes_ttl_seconds)
+        knowledge_cache = AsyncTTLCache(ttl=settings.cache.knowledge_ttl_seconds)
 
         device_service = DeviceService(channelfinder=channelfinder, cache=device_cache)
         diagnostics_service = DiagnosticsService(
@@ -106,7 +108,9 @@ class AppContext:
         history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
         documentation_service = DocumentationService(documentation=documentation)
         default_repos = [r.strip() for r in settings.git_default_repos.split(",") if r.strip()]
-        knowledge_service = KnowledgeService(github=github, gitlab=gitlab, default_repos=default_repos)
+        knowledge_service = KnowledgeService(
+            github=github, gitlab=gitlab, default_repos=default_repos, cache=knowledge_cache
+        )
 
         return cls(
             settings=settings,
@@ -124,6 +128,7 @@ class AppContext:
             device_cache=device_cache,
             channelfinder_cache=channelfinder_cache,
             kubernetes_cache=kubernetes_cache,
+            knowledge_cache=knowledge_cache,
             device_service=device_service,
             diagnostics_service=diagnostics_service,
             operations_service=operations_service,

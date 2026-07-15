@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+from argus.core.cache import AsyncTTLCache
 from argus.core.models import gather_with_timeout
 from argus.providers.git.exceptions import UnsupportedGitHostError
 from argus.providers.git.github import GitHubProvider
@@ -25,10 +26,12 @@ class KnowledgeService:
         github: GitHubProvider,
         gitlab: GitLabProvider,
         default_repos: list[str] | None = None,
+        cache: AsyncTTLCache | None = None,
     ) -> None:
         self._github = github
         self._gitlab = gitlab
         self._default_repos = default_repos or []
+        self._cache = cache or AsyncTTLCache(ttl=600.0)
 
     def _provider_for(self, repo: str) -> GitProvider:
         host = urlparse(repo).netloc if "://" in repo else repo.split("/")[0]
@@ -43,13 +46,17 @@ class KnowledgeService:
         )
 
     async def get_file(self, repo: str, path: str, ref: str = "HEAD") -> FileContent:
-        return await self._provider_for(repo).get_file(repo, path, ref)
+        key = f"file:{repo}:{path}:{ref}"
+        return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_file(repo, path, ref))
 
     async def get_config_history(self, repo: str, path: str, limit: int = 20) -> list[CommitInfo]:
-        return await self._provider_for(repo).get_history(repo, path, limit)
+        key = f"history:{repo}:{path}:{limit}"
+        return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_history(repo, path, limit))
 
     async def get_commit_diff(self, repo: str, sha: str) -> list[FileDiff]:
-        return await self._provider_for(repo).get_commit_diff(repo, sha)
+        # A commit's diff is immutable once it exists -- caching it is always safe.
+        key = f"diff:{repo}:{sha}"
+        return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_commit_diff(repo, sha))
 
     async def search_knowledge_base(
         self, query: str, repos: list[str] | None = None, state: str = "all", timeout: float = 10.0

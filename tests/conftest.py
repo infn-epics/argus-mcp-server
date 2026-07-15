@@ -105,6 +105,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     device_cache = AsyncTTLCache(ttl=60)
     channelfinder_cache = AsyncTTLCache(ttl=60)
     kubernetes_cache = AsyncTTLCache(ttl=60)
+    knowledge_cache = AsyncTTLCache(ttl=60)
 
     device_service = DeviceService(channelfinder=channelfinder, cache=device_cache)
     diagnostics_service = DiagnosticsService(
@@ -127,7 +128,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     )
     history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
     documentation_service = DocumentationService(documentation=documentation)
-    knowledge_service = KnowledgeService(github=github, gitlab=gitlab)
+    knowledge_service = KnowledgeService(github=github, gitlab=gitlab, cache=knowledge_cache)
 
     return AppContext(
         settings=settings,
@@ -145,6 +146,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         device_cache=device_cache,
         channelfinder_cache=channelfinder_cache,
         kubernetes_cache=kubernetes_cache,
+        knowledge_cache=knowledge_cache,
         device_service=device_service,
         diagnostics_service=diagnostics_service,
         operations_service=operations_service,

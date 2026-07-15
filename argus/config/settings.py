@@ -88,6 +88,11 @@ class CacheSettings(_ProviderSettings):
     device_ttl_seconds: float = Field(default=300.0, alias="CACHE_DEVICE_TTL_SECONDS")
     channelfinder_ttl_seconds: float = Field(default=120.0, alias="CACHE_CHANNELFINDER_TTL_SECONDS")
     kubernetes_ttl_seconds: float = Field(default=30.0, alias="CACHE_KUBERNETES_TTL_SECONDS")
+    # get_config_history is now the recommended first call for most beamline
+    # questions (see knowledge_tools.py), so it needs a much longer TTL than
+    # live-data caches above -- config files change on the order of days, not
+    # seconds, and every GitHub/GitLab call is a real network round-trip.
+    knowledge_ttl_seconds: float = Field(default=600.0, alias="CACHE_KNOWLEDGE_TTL_SECONDS")
 
 
 class Settings(BaseSettings):
