@@ -38,6 +38,7 @@ method on an unconfigured provider raises that provider's
 | Logbook | `providers/logbook/logbook.py` | olog-compatible REST (`/Olog/logs`) | `LOGBOOK_BASE_URL`, `LOGBOOK_USERNAME`/`PASSWORD` | `LogbookUnavailableError`, `LogbookQueryError` |
 | Elasticsearch | `providers/elastic/elasticsearch.py` | official [`elasticsearch`](https://pypi.org/project/elasticsearch/) async client | `ELASTIC_URL`, `ELASTIC_API_KEY`, `ELASTIC_DEFAULT_INDEX` | `ElasticsearchUnavailableError`, `ElasticsearchQueryError` |
 | Documentation | `providers/documentation/rag.py` | local TF-IDF (`scikit-learn`) over a docs folder — no external service | `DOCS_PATH`, `DOCS_INDEX_PATH` | `DocumentationUnconfiguredError`, `DocumentationIndexError` |
+| Documentation (RAGFLOW) | `providers/documentation/ragflow.py` | REST: RAGFLOW's own `/api/v1/retrieval` — called server-to-server, not via RAGFLOW's separate MCP bridge | `DOCUMENTATION_BACKEND=ragflow`, `RAGFLOW_BASE_URL`, `RAGFLOW_API_KEY`, `RAGFLOW_DATASET_IDS` | `DocumentationUnconfiguredError`, `DocumentationUnavailableError`, `DocumentationTimeoutError`, `DocumentationQueryError` |
 
 ## Notes
 
@@ -49,8 +50,10 @@ method on an unconfigured provider raises that provider's
 - **Documentation defaults to local TF-IDF**, not embeddings — see
   [ADR 0003](adr/0003-local-tfidf-documentation-default.md). The
   `DocumentationProvider` protocol (`providers/documentation/interface.py`)
-  is deliberately separate from `rag.py`'s implementation so a real
-  vector-DB-backed provider is a drop-in replacement later.
+  is deliberately separate from `rag.py`'s implementation, which is why
+  swapping in `ragflow.py` (set `DOCUMENTATION_BACKEND=ragflow`) needed no
+  changes to `documentation_service.py` or the `search_documentation` tool —
+  exactly the drop-in replacement ADR 0003 anticipated.
 - **Kubernetes and pod status are cached** (30s TTL) via
   `OperationsService`'s injected `AsyncTTLCache`; `restart_ioc` explicitly
   invalidates the relevant cache key. **ChannelFinder-derived device metadata

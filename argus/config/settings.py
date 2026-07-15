@@ -63,6 +63,24 @@ class DocumentationSettings(_ProviderSettings):
     index_path: str | None = Field(default=None, alias="DOCS_INDEX_PATH")
 
 
+class RagflowSettings(_ProviderSettings):
+    base_url: str | None = Field(default=None, alias="RAGFLOW_BASE_URL")
+    api_key: str | None = Field(default=None, alias="RAGFLOW_API_KEY")
+    # Comma-separated dataset IDs to search. Left unset, the query searches
+    # every dataset the API key can access.
+    dataset_ids: str | None = Field(default=None, alias="RAGFLOW_DATASET_IDS")
+
+
+class GitHubSettings(_ProviderSettings):
+    base_url: str = Field(default="https://api.github.com", alias="GITHUB_BASE_URL")
+    token: str | None = Field(default=None, alias="GITHUB_TOKEN")
+
+
+class GitLabSettings(_ProviderSettings):
+    base_url: str | None = Field(default=None, alias="GITLAB_BASE_URL")
+    token: str | None = Field(default=None, alias="GITLAB_TOKEN")
+
+
 class CacheSettings(_ProviderSettings):
     device_ttl_seconds: float = Field(default=300.0, alias="CACHE_DEVICE_TTL_SECONDS")
     channelfinder_ttl_seconds: float = Field(default=120.0, alias="CACHE_CHANNELFINDER_TTL_SECONDS")
@@ -78,6 +96,15 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="ARGUS_LOG_LEVEL")
     log_json: bool = Field(default=True, alias="ARGUS_LOG_JSON")
 
+    # Comma-separated repo URLs search_knowledge_base searches when the
+    # caller doesn't specify a repo list explicitly.
+    git_default_repos: str = Field(default="", alias="GIT_DEFAULT_REPOS")
+
+    # Which DocumentationProvider backs search_documentation. "ragflow"
+    # requires ragflow.base_url + ragflow.api_key; falls back to local
+    # TF-IDF behavior either way if ragflow isn't actually configured.
+    documentation_backend: Literal["local", "ragflow"] = Field(default="local", alias="DOCUMENTATION_BACKEND")
+
     epics: EpicsSettings = Field(default_factory=EpicsSettings)
     archiver: ArchiverSettings = Field(default_factory=ArchiverSettings)
     channelfinder: ChannelFinderSettings = Field(default_factory=ChannelFinderSettings)
@@ -86,4 +113,7 @@ class Settings(BaseSettings):
     logbook: LogbookSettings = Field(default_factory=LogbookSettings)
     elastic: ElasticSettings = Field(default_factory=ElasticSettings)
     documentation: DocumentationSettings = Field(default_factory=DocumentationSettings)
+    ragflow: RagflowSettings = Field(default_factory=RagflowSettings)
+    github: GitHubSettings = Field(default_factory=GitHubSettings)
+    gitlab: GitLabSettings = Field(default_factory=GitLabSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)

@@ -14,17 +14,22 @@ from argus.core.cache import AsyncTTLCache
 from argus.providers.archiver.archiver_appliance import ArchiverApplianceProvider
 from argus.providers.argocd.argocd import ArgoCDProvider
 from argus.providers.channelfinder.channelfinder import ChannelFinderProvider
+from argus.providers.documentation.interface import DocumentationProvider
 from argus.providers.documentation.rag import LocalTfidfDocumentationProvider
+from argus.providers.documentation.ragflow import RagflowDocumentationProvider
 from argus.providers.elastic.elasticsearch import ElasticsearchProvider
 from argus.providers.epics.channel_access import ChannelAccessProvider
 from argus.providers.epics.interface import EpicsProvider
 from argus.providers.epics.pvaccess import PvAccessProvider
 from argus.providers.kubernetes.kubernetes import KubernetesProvider
+from argus.providers.git.github import GitHubProvider
+from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.logbook.logbook import LogbookProvider
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
 from argus.services.documentation_service import DocumentationService
 from argus.services.history_service import HistoryService
+from argus.services.knowledge_service import KnowledgeService
 from argus.services.operations_service import OperationsService, ProcedureRegistry
 
 
@@ -40,7 +45,9 @@ class AppContext:
     argocd: ArgoCDProvider
     logbook: LogbookProvider
     elastic: ElasticsearchProvider
-    documentation: LocalTfidfDocumentationProvider
+    documentation: DocumentationProvider
+    github: GitHubProvider
+    gitlab: GitLabProvider
 
     device_cache: AsyncTTLCache
     channelfinder_cache: AsyncTTLCache
@@ -51,6 +58,7 @@ class AppContext:
     operations_service: OperationsService
     history_service: HistoryService
     documentation_service: DocumentationService
+    knowledge_service: KnowledgeService
 
     @classmethod
     def build(cls, settings: Settings | None = None) -> AppContext:
@@ -64,7 +72,13 @@ class AppContext:
         argocd = ArgoCDProvider(settings.argocd)
         logbook = LogbookProvider(settings.logbook)
         elastic = ElasticsearchProvider(settings.elastic)
-        documentation = LocalTfidfDocumentationProvider(settings.documentation)
+        documentation: DocumentationProvider
+        if settings.documentation_backend == "ragflow":
+            documentation = RagflowDocumentationProvider(settings.ragflow)
+        else:
+            documentation = LocalTfidfDocumentationProvider(settings.documentation)
+        github = GitHubProvider(settings.github)
+        gitlab = GitLabProvider(settings.gitlab)
 
         device_cache = AsyncTTLCache(ttl=settings.cache.device_ttl_seconds)
         channelfinder_cache = AsyncTTLCache(ttl=settings.cache.channelfinder_ttl_seconds)
@@ -91,6 +105,8 @@ class AppContext:
         )
         history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
         documentation_service = DocumentationService(documentation=documentation)
+        default_repos = [r.strip() for r in settings.git_default_repos.split(",") if r.strip()]
+        knowledge_service = KnowledgeService(github=github, gitlab=gitlab, default_repos=default_repos)
 
         return cls(
             settings=settings,
@@ -103,6 +119,8 @@ class AppContext:
             logbook=logbook,
             elastic=elastic,
             documentation=documentation,
+            github=github,
+            gitlab=gitlab,
             device_cache=device_cache,
             channelfinder_cache=channelfinder_cache,
             kubernetes_cache=kubernetes_cache,
@@ -111,4 +129,5 @@ class AppContext:
             operations_service=operations_service,
             history_service=history_service,
             documentation_service=documentation_service,
+            knowledge_service=knowledge_service,
         )

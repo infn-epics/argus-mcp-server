@@ -11,6 +11,8 @@ from argus.config.settings import (
     ChannelFinderSettings,
     DocumentationSettings,
     ElasticSettings,
+    GitHubSettings,
+    GitLabSettings,
     KubernetesSettings,
     LogbookSettings,
     Settings,
@@ -25,12 +27,15 @@ from argus.providers.documentation.rag import LocalTfidfDocumentationProvider
 from argus.providers.elastic.elasticsearch import ElasticsearchProvider
 from argus.providers.epics.exceptions import EpicsConnectionError, EpicsUnconfiguredError
 from argus.providers.epics.models import PVInfo, PVValue, PVWriteResult
+from argus.providers.git.github import GitHubProvider
+from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.logbook.logbook import LogbookProvider
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
 from argus.services.documentation_service import DocumentationService
 from argus.services.history_service import HistoryService
+from argus.services.knowledge_service import KnowledgeService
 from argus.services.operations_service import OperationsService, ProcedureRegistry
 
 
@@ -94,6 +99,8 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     logbook = LogbookProvider(LogbookSettings(_env_file=None))
     elastic = ElasticsearchProvider(ElasticSettings(_env_file=None))
     documentation = LocalTfidfDocumentationProvider(DocumentationSettings(_env_file=None))
+    github = GitHubProvider(GitHubSettings(_env_file=None))
+    gitlab = GitLabProvider(GitLabSettings(_env_file=None))
 
     device_cache = AsyncTTLCache(ttl=60)
     channelfinder_cache = AsyncTTLCache(ttl=60)
@@ -120,6 +127,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     )
     history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
     documentation_service = DocumentationService(documentation=documentation)
+    knowledge_service = KnowledgeService(github=github, gitlab=gitlab)
 
     return AppContext(
         settings=settings,
@@ -132,6 +140,8 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         logbook=logbook,
         elastic=elastic,
         documentation=documentation,
+        github=github,
+        gitlab=gitlab,
         device_cache=device_cache,
         channelfinder_cache=channelfinder_cache,
         kubernetes_cache=kubernetes_cache,
@@ -140,4 +150,5 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         operations_service=operations_service,
         history_service=history_service,
         documentation_service=documentation_service,
+        knowledge_service=knowledge_service,
     )

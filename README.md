@@ -78,7 +78,7 @@ input schemas, enforced by
 | `restart_ioc` | Restart an IOC's pod |
 | `machine_summary` | Machine-wide IOC health + recent alarm counts |
 | `execute_procedure` | Run a named, pre-approved operational procedure (scaffolded; no procedures ship yet — see [ADR context](docs/adr/)) |
-| `search_documentation` | Search technical documentation (local TF-IDF by default) |
+| `search_documentation` | Search technical documentation (local TF-IDF by default, or RAGFLOW — see [providers.md](docs/providers.md)) |
 
 ## Development
 
