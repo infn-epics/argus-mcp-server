@@ -42,6 +42,21 @@ async def test_search_entries_parses_payload():
 
 
 @respx.mock
+async def test_search_entries_sends_text_param_not_search():
+    # olog's real search param for free-text-in-description is "text" (also
+    # accepted as "desc"/"description") -- "search" is not recognized and is
+    # silently dropped server-side (confirmed against phoebus-olog's own
+    # LogSearchUtil.java). Regression test for that exact bug.
+    provider = _configured()
+    route = respx.get("http://olog.test/Olog/logs").mock(return_value=httpx.Response(200, json=[]))
+    await provider.search_entries(text="QF12", tags=["alarm"])
+
+    sent_params = dict(route.calls.last.request.url.params)
+    assert sent_params["text"] == "QF12"
+    assert "search" not in sent_params
+
+
+@respx.mock
 async def test_unreachable_backend_raises_unavailable():
     provider = _configured()
     respx.get("http://olog.test/Olog/logs").mock(side_effect=httpx.ConnectError("refused"))

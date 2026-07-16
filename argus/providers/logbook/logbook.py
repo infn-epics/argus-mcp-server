@@ -70,7 +70,15 @@ class LogbookProvider:
         if tags:
             params["tags"] = ",".join(tags)
         if text:
-            params["search"] = text
+            # "text" (also accepted as "desc"/"description") is the real
+            # olog service's free-text-in-description search param -- "search"
+            # is not recognized at all and was silently ignored server-side
+            # (LogSearchUtil.java's param switch has an explicit "unsupported
+            # search parameters are ignored" default case), confirmed by
+            # reading phoebus-olog's actual source. This means every existing
+            # caller passing `text` (get_alarm_history, get_maintenance_history)
+            # was never actually filtering by it.
+            params["text"] = text
         if since:
             params["start"] = since.isoformat()
 
