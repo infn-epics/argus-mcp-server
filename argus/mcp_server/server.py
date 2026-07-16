@@ -25,6 +25,7 @@ from argus.mcp_server.tools.logs_tools import TOOLS as LOGS_TOOLS
 from argus.mcp_server.tools.ops_tools import TOOLS as OPS_TOOLS
 from argus.mcp_server.tools.pv_tools import TOOLS as PV_TOOLS
 from argus.mcp_server.tools.registry import ToolRegistry
+from argus.mcp_server.tools.saverestore_tools import TOOLS as SAVERESTORE_TOOLS
 from argus.mcp_server.transports.sse import run_sse
 from argus.mcp_server.transports.stdio import run_stdio
 
@@ -44,6 +45,7 @@ def build_registry() -> ToolRegistry:
     registry.register_many(LOGS_TOOLS)
     registry.register_many(DOCS_TOOLS)
     registry.register_many(KNOWLEDGE_TOOLS)
+    registry.register_many(SAVERESTORE_TOOLS)
     return registry
 
 

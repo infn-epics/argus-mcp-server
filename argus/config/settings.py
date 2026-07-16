@@ -46,6 +46,11 @@ class ArgoCDSettings(_ProviderSettings):
     auth_token: str | None = Field(default=None, alias="ARGOCD_AUTH_TOKEN")
 
 
+class SaveRestoreSettings(_ProviderSettings):
+    # Phoebus save-and-restore service base URL, e.g. http://saveandrestore.btf.svc.cluster.local/save-restore
+    base_url: str | None = Field(default=None, alias="SAVERESTORE_BASE_URL")
+
+
 class LogbookSettings(_ProviderSettings):
     base_url: str | None = Field(default=None, alias="LOGBOOK_BASE_URL")
     username: str | None = Field(default=None, alias="LOGBOOK_USERNAME")
@@ -66,11 +71,21 @@ class DocumentationSettings(_ProviderSettings):
 class RagflowSettings(_ProviderSettings):
     base_url: str | None = Field(default=None, alias="RAGFLOW_BASE_URL")
     api_key: str | None = Field(default=None, alias="RAGFLOW_API_KEY")
-    # Comma-separated dataset IDs to search. Left unset, the query searches
-    # every dataset the API key can access -- slower (embedding+rerank over
-    # a wider corpus), so timeout_seconds defaults higher than a scoped
-    # search would need.
+    # Comma-separated exact dataset UUIDs, if already known. Most deployments
+    # should prefer dataset_names below instead -- UUIDs are opaque and
+    # specific to one RAGFLOW instance, so hardcoding them isn't portable
+    # across beamlines. NOTE: at least one dataset (by id or resolved name)
+    # is required by some RAGFLOW deployments -- confirmed live against
+    # INFN's instance, which rejects a request with neither ("`dataset_ids`
+    # is required."). Left both empty, search will fail with that same
+    # RAGFLOW-side error, not a generic "no docs found".
     dataset_ids: str | None = Field(default=None, alias="RAGFLOW_DATASET_IDS")
+    # Comma-separated case-insensitive substrings matched against dataset
+    # names (e.g. "Controlli" matches a dataset literally named
+    # "Controlli-KB") and resolved to their ids at query time via GET
+    # /api/v1/datasets, cached briefly. A name with no match is skipped, not
+    # an error -- e.g. a per-beamline dataset that doesn't exist yet.
+    dataset_names: str | None = Field(default=None, alias="RAGFLOW_DATASET_NAMES")
     timeout_seconds: float = Field(default=20.0, alias="RAGFLOW_TIMEOUT_SECONDS")
 
 
@@ -118,6 +133,7 @@ class Settings(BaseSettings):
     channelfinder: ChannelFinderSettings = Field(default_factory=ChannelFinderSettings)
     kubernetes: KubernetesSettings = Field(default_factory=KubernetesSettings)
     argocd: ArgoCDSettings = Field(default_factory=ArgoCDSettings)
+    saverestore: SaveRestoreSettings = Field(default_factory=SaveRestoreSettings)
     logbook: LogbookSettings = Field(default_factory=LogbookSettings)
     elastic: ElasticSettings = Field(default_factory=ElasticSettings)
     documentation: DocumentationSettings = Field(default_factory=DocumentationSettings)

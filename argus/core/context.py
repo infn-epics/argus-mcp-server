@@ -25,6 +25,7 @@ from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.git.github import GitHubProvider
 from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.providers.saverestore.saverestore import SaveRestoreProvider
 from argus.services.beamline_inventory_service import BeamlineInventoryService
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
@@ -32,6 +33,7 @@ from argus.services.documentation_service import DocumentationService
 from argus.services.history_service import HistoryService
 from argus.services.knowledge_service import KnowledgeService
 from argus.services.operations_service import OperationsService, ProcedureRegistry
+from argus.services.saverestore_service import SaveRestoreService
 
 
 @dataclass
@@ -49,6 +51,7 @@ class AppContext:
     documentation: DocumentationProvider
     github: GitHubProvider
     gitlab: GitLabProvider
+    saverestore: SaveRestoreProvider
 
     device_cache: AsyncTTLCache
     channelfinder_cache: AsyncTTLCache
@@ -62,6 +65,7 @@ class AppContext:
     documentation_service: DocumentationService
     knowledge_service: KnowledgeService
     beamline_inventory_service: BeamlineInventoryService
+    saverestore_service: SaveRestoreService
 
     @classmethod
     def build(cls, settings: Settings | None = None) -> AppContext:
@@ -82,6 +86,7 @@ class AppContext:
             documentation = LocalTfidfDocumentationProvider(settings.documentation)
         github = GitHubProvider(settings.github)
         gitlab = GitLabProvider(settings.gitlab)
+        saverestore = SaveRestoreProvider(settings.saverestore)
 
         device_cache = AsyncTTLCache(ttl=settings.cache.device_ttl_seconds)
         channelfinder_cache = AsyncTTLCache(ttl=settings.cache.channelfinder_ttl_seconds)
@@ -114,6 +119,7 @@ class AppContext:
             github=github, gitlab=gitlab, default_repos=default_repos, cache=knowledge_cache
         )
         beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
+        saverestore_service = SaveRestoreService(saverestore=saverestore)
 
         return cls(
             settings=settings,
@@ -128,6 +134,7 @@ class AppContext:
             documentation=documentation,
             github=github,
             gitlab=gitlab,
+            saverestore=saverestore,
             device_cache=device_cache,
             channelfinder_cache=channelfinder_cache,
             kubernetes_cache=kubernetes_cache,
@@ -139,4 +146,5 @@ class AppContext:
             documentation_service=documentation_service,
             knowledge_service=knowledge_service,
             beamline_inventory_service=beamline_inventory_service,
+            saverestore_service=saverestore_service,
         )

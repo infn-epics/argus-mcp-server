@@ -26,6 +26,25 @@ _GET_ALARM_HISTORY_SCHEMA = {
     "required": ["device_name"],
 }
 
+_CREATE_LOGBOOK_ENTRY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string", "description": "Short title for the logbook entry."},
+        "text": {"type": "string", "description": "The entry's body text."},
+        "logbooks": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Which logbook(s) to post to, e.g. ['Operations']. At least one required.",
+        },
+        "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional tags, e.g. ['alarm'] or ['maintenance'] — used by get_alarm_history/get_maintenance_history filtering.",
+        },
+    },
+    "required": ["title", "text", "logbooks"],
+}
+
 
 def _parse_time(value: str | None, default: datetime) -> datetime:
     if not value:
@@ -58,6 +77,21 @@ async def _get_alarm_history(arguments: dict[str, Any], ctx: AppContext) -> dict
     return {"entries": [dataclasses.asdict(e) for e in entries]}
 
 
+async def _create_logbook_entry(arguments: dict[str, Any], ctx: AppContext) -> dict[str, Any]:
+    title = arguments.get("title")
+    text = arguments.get("text")
+    logbooks = arguments.get("logbooks")
+    if not title or not isinstance(title, str):
+        raise ValidationError("title cannot be empty and must be a string.")
+    if not text or not isinstance(text, str):
+        raise ValidationError("text cannot be empty and must be a string.")
+    if not logbooks or not isinstance(logbooks, list):
+        raise ValidationError("logbooks cannot be empty and must be a list of strings.")
+
+    entry = await ctx.history_service.create_logbook_entry(title, text, logbooks, tags=arguments.get("tags"))
+    return dataclasses.asdict(entry)
+
+
 TOOLS = [
     ToolDefinition(
         name="get_history",
@@ -70,5 +104,17 @@ TOOLS = [
         description="Get recent alarm-tagged logbook entries for a device.",
         input_schema=_GET_ALARM_HISTORY_SCHEMA,
         handler=_get_alarm_history,
+    ),
+    ToolDefinition(
+        name="create_logbook_entry",
+        description=(
+            "Post a new entry to the operations logbook (e.g. to record an observation, an action taken, "
+            "or a handover note). This writes a real, permanent logbook entry — use it only when the user "
+            "explicitly asks to log/record/note something, never as a side effect of an unrelated "
+            "question. Tag with 'alarm' or 'maintenance' if relevant so it surfaces in "
+            "get_alarm_history/get_maintenance_history later."
+        ),
+        input_schema=_CREATE_LOGBOOK_ENTRY_SCHEMA,
+        handler=_create_logbook_entry,
     ),
 ]

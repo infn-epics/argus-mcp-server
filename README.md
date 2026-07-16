@@ -73,6 +73,7 @@ input schemas, enforced by
 | `beamline_status` | Aggregate status across a group of devices |
 | `get_history` | Historical trend data for a PV (Archiver Appliance) |
 | `get_alarm_history` | Recent alarm-tagged logbook entries for a device |
+| `create_logbook_entry` | Post a new entry to the operations logbook |
 | `get_logs` | Search historical application/IOC logs (Elasticsearch) |
 | `list_iocs` | List IOCs and their Kubernetes pod status |
 | `restart_ioc` | Restart an IOC's pod |
@@ -82,6 +83,8 @@ input schemas, enforced by
 | `list_beamline_devices` | Structured device inventory (IOCs, zones, devgroup/devfunc) parsed from a beamline's deploy YAML |
 | `get_config_history` | Read a beamline config file's current content, git history, or a commit's diff (GitHub/GitLab) |
 | `search_knowledge_base` | Search issues/tickets across configured repos for past problems and resolutions (GitHub/GitLab) |
+| `search_snapshots` | Search/browse Phoebus save-and-restore configurations and snapshots (read-only) |
+| `get_snapshot` | Read a save-and-restore configuration's PV list, or a snapshot's saved values (read-only) |
 
 ## Development
 

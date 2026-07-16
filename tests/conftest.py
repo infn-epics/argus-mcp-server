@@ -15,6 +15,7 @@ from argus.config.settings import (
     GitLabSettings,
     KubernetesSettings,
     LogbookSettings,
+    SaveRestoreSettings,
     Settings,
 )
 from argus.core.cache import AsyncTTLCache
@@ -31,6 +32,7 @@ from argus.providers.git.github import GitHubProvider
 from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.providers.saverestore.saverestore import SaveRestoreProvider
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
 from argus.services.documentation_service import DocumentationService
@@ -38,6 +40,7 @@ from argus.services.history_service import HistoryService
 from argus.services.beamline_inventory_service import BeamlineInventoryService
 from argus.services.knowledge_service import KnowledgeService
 from argus.services.operations_service import OperationsService, ProcedureRegistry
+from argus.services.saverestore_service import SaveRestoreService
 
 
 @dataclass
@@ -102,6 +105,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     documentation = LocalTfidfDocumentationProvider(DocumentationSettings(_env_file=None))
     github = GitHubProvider(GitHubSettings(_env_file=None))
     gitlab = GitLabProvider(GitLabSettings(_env_file=None))
+    saverestore = SaveRestoreProvider(SaveRestoreSettings(_env_file=None))
 
     device_cache = AsyncTTLCache(ttl=60)
     channelfinder_cache = AsyncTTLCache(ttl=60)
@@ -131,6 +135,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     documentation_service = DocumentationService(documentation=documentation)
     knowledge_service = KnowledgeService(github=github, gitlab=gitlab, cache=knowledge_cache)
     beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
+    saverestore_service = SaveRestoreService(saverestore=saverestore)
 
     return AppContext(
         settings=settings,
@@ -145,6 +150,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         documentation=documentation,
         github=github,
         gitlab=gitlab,
+        saverestore=saverestore,
         device_cache=device_cache,
         channelfinder_cache=channelfinder_cache,
         kubernetes_cache=kubernetes_cache,
@@ -156,4 +162,5 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         documentation_service=documentation_service,
         knowledge_service=knowledge_service,
         beamline_inventory_service=beamline_inventory_service,
+        saverestore_service=saverestore_service,
     )

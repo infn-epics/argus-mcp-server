@@ -39,6 +39,7 @@ method on an unconfigured provider raises that provider's
 | Elasticsearch | `providers/elastic/elasticsearch.py` | official [`elasticsearch`](https://pypi.org/project/elasticsearch/) async client | `ELASTIC_URL`, `ELASTIC_API_KEY`, `ELASTIC_DEFAULT_INDEX` | `ElasticsearchUnavailableError`, `ElasticsearchQueryError` |
 | Documentation | `providers/documentation/rag.py` | local TF-IDF (`scikit-learn`) over a docs folder — no external service | `DOCS_PATH`, `DOCS_INDEX_PATH` | `DocumentationUnconfiguredError`, `DocumentationIndexError` |
 | Documentation (RAGFLOW) | `providers/documentation/ragflow.py` | REST: RAGFLOW's own `/api/v1/retrieval` — called server-to-server, not via RAGFLOW's separate MCP bridge | `DOCUMENTATION_BACKEND=ragflow`, `RAGFLOW_BASE_URL`, `RAGFLOW_API_KEY`, `RAGFLOW_DATASET_IDS`, `RAGFLOW_TIMEOUT_SECONDS` (default 20s — an unscoped search across every accessible dataset is slower than local TF-IDF) | `DocumentationUnconfiguredError`, `DocumentationUnavailableError`, `DocumentationTimeoutError`, `DocumentationQueryError` |
+| Save & Restore | `providers/saverestore/saverestore.py` | REST: Phoebus save-and-restore's `/search`, `/node/{id}`, `/config/{id}`, `/snapshot/{id}` — read-only, endpoints confirmed live against a real deployment | `SAVERESTORE_BASE_URL` | `SaveRestoreUnconfiguredError`, `SaveRestoreUnavailableError`, `SaveRestoreTimeoutError`, `SaveRestoreQueryError` |
 
 ## Notes
 
@@ -59,3 +60,10 @@ method on an unconfigured provider raises that provider's
   invalidates the relevant cache key. **ChannelFinder-derived device metadata
   is cached** (300s TTL) inside `DeviceService`. **Live PV values are never
   cached.**
+- **Save & Restore is deliberately read-only.** The real service's
+  `/restore/*` endpoints return `401` without an OAuth2 bearer token, which
+  ARGUS has no credentials for — and restoring a snapshot writes potentially
+  dozens of PVs across the machine back to old values, the highest-blast-
+  radius write ARGUS could have. Search/browse/read (configurations,
+  snapshots, PV values) are open, unauthenticated reads on the real service
+  and are all that's implemented for now.

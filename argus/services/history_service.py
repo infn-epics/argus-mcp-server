@@ -43,3 +43,8 @@ class HistoryService:
         self, query: str, *, index: str | None = None, since: datetime | None = None, limit: int = 100
     ) -> list[LogRecord]:
         return await self._elastic.search_logs(query=query, index=index, since=since, limit=limit)
+
+    async def create_logbook_entry(
+        self, title: str, text: str, logbooks: list[str], tags: list[str] | None = None
+    ) -> LogbookEntry:
+        return await self._logbook.create_entry(title, text, logbooks, tags=tags)

@@ -47,3 +47,51 @@ async def test_unreachable_backend_raises_unavailable():
     respx.get("http://olog.test/Olog/logs").mock(side_effect=httpx.ConnectError("refused"))
     with pytest.raises(LogbookUnavailableError):
         await provider.search_entries(text="QF12")
+
+
+async def test_create_entry_unconfigured_raises_clean_error():
+    provider = LogbookProvider(LogbookSettings(_env_file=None))
+    with pytest.raises(LogbookUnconfiguredError):
+        await provider.create_entry("title", "text", ["operations"])
+
+
+@respx.mock
+async def test_create_entry_sends_expected_body_and_parses_response():
+    provider = _configured()
+    route = respx.put("http://olog.test/Olog/logs").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 42,
+                "title": "Shift handover",
+                "description": "All nominal.",
+                "logbooks": [{"name": "operations"}],
+                "tags": [{"name": "maintenance"}],
+                "owner": "shift-crew",
+            },
+        )
+    )
+    entry = await provider.create_entry(
+        "Shift handover", "All nominal.", ["operations"], tags=["maintenance"]
+    )
+    assert entry.id == "42"
+    assert entry.title == "Shift handover"
+    assert entry.logbooks == ["operations"]
+    assert entry.tags == ["maintenance"]
+
+    sent = route.calls.last.request
+    import json
+
+    body = json.loads(sent.content)
+    assert body["title"] == "Shift handover"
+    assert body["description"] == "All nominal."
+    assert body["logbooks"] == [{"name": "operations"}]
+    assert body["tags"] == [{"name": "maintenance"}]
+
+
+@respx.mock
+async def test_create_entry_unreachable_raises_unavailable():
+    provider = _configured()
+    respx.put("http://olog.test/Olog/logs").mock(side_effect=httpx.ConnectError("refused"))
+    with pytest.raises(LogbookUnavailableError):
+        await provider.create_entry("title", "text", ["operations"])
