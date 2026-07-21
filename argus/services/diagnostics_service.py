@@ -18,8 +18,9 @@ from argus.providers.documentation.rag import LocalTfidfDocumentationProvider
 from argus.providers.epics.interface import EpicsProvider
 from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.providers.loki.loki import LokiProvider
 from argus.services.device_service import DeviceService
-from argus.services.models import DeviceStatusReport, DiagnosticReport
+from argus.services.models import Device, DeviceStatusReport, DiagnosticReport
 
 _DEVICE_STATUS_TIMEOUT = 3.0
 _DIAGNOSE_TIMEOUT = 10.0
@@ -35,6 +36,7 @@ class DiagnosticsService:
         argocd: ArgoCDProvider,
         logbook: LogbookProvider,
         documentation: LocalTfidfDocumentationProvider,
+        loki: LokiProvider,
     ) -> None:
         self._device_service = device_service
         self._epics = epics
@@ -43,6 +45,17 @@ class DiagnosticsService:
         self._argocd = argocd
         self._logbook = logbook
         self._documentation = documentation
+        self._loki = loki
+
+    async def _pod_logs(self, device: Device) -> Any:
+        """Loki-first (7-day history, survives pod restarts) when configured,
+        falling back to the live kubectl tail otherwise -- keeps beamlines
+        without the platform's Loki deployed working exactly as before.
+        """
+        namespace = device.namespace or "default"
+        if self._loki.is_configured():
+            return await self._loki.search(namespace=namespace, pod=device.pod_name, limit=200)
+        return await self._kubernetes.get_pod_logs(device.pod_name, namespace)
 
     async def device_status(self, device_name: str, *, timeout: float = _DEVICE_STATUS_TIMEOUT) -> DeviceStatusReport:
         device = await self._device_service.resolve_device(device_name)
@@ -85,7 +98,7 @@ class DiagnosticsService:
             pre_skipped["pod"] = skipped("kubernetes", "device has no known IOC name")
 
         if device.pod_name:
-            tasks["pod_logs"] = self._kubernetes.get_pod_logs(device.pod_name, device.namespace or "default")
+            tasks["pod_logs"] = self._pod_logs(device)
         else:
             pre_skipped["pod_logs"] = skipped("kubernetes", "device has no known pod name")
 

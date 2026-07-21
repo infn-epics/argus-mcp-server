@@ -99,7 +99,7 @@ async def test_registered_tool_names_are_unique():
 async def test_tool_count_is_within_high_level_target_band():
     registry = build_registry()
     # ~15-20 high-level tools per the ARGUS design goal — not hundreds of
-    # low-level per-backend tools. Explicitly over by four (24): +1
+    # low-level per-backend tools. Explicitly over by five (25): +1
     # list_beamline_devices (answering "what magnets/quadrupoles exist on
     # this beamline" reliably requires parsing+classifying the beamline YAML
     # via iocDefaults template inheritance, which get_config_history's raw
@@ -107,7 +107,10 @@ async def test_tool_count_is_within_high_level_target_band():
     # provider-level write already existed but had no tool exposing it), +2
     # search_snapshots/get_snapshot (a whole new read-only domain — Phoebus
     # save-and-restore configurations/snapshots — kept to 2 tools mirroring
-    # search_knowledge_base/get_config_history's shape). All real, distinct
+    # search_knowledge_base/get_config_history's shape), +1 search_pod_logs
+    # (Loki-backed pod log history — distinct from get_logs's Elasticsearch
+    # backend and from diagnose_device's single-device pod_logs leg; a
+    # cross-pod/cross-namespace search needs its own tool). All real, distinct
     # capabilities, not scope creep, so the band is widened deliberately
     # rather than silently upped.
-    assert 15 <= len(registry.list_tools()) <= 24
+    assert 15 <= len(registry.list_tools()) <= 25

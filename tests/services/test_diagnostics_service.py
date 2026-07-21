@@ -21,7 +21,12 @@ class _StubChannelFinder:
             CFChannel(
                 name="QF12:CURRENT",
                 owner="ops",
-                properties={"device": "QF12", "iocName": "ioc-qf12", "k8sNamespace": "accelerator"},
+                properties={
+                    "device": "QF12",
+                    "iocName": "ioc-qf12",
+                    "k8sNamespace": "accelerator",
+                    "k8sPod": "ioc-qf12-abc123",
+                },
                 tags=[],
             )
         ]
@@ -47,6 +52,34 @@ class _StubKubernetesDown:
         raise KubernetesUnavailableError("cluster unreachable")
 
 
+class _StubLokiUnconfigured:
+    def is_configured(self) -> bool:
+        return False
+
+    async def search(self, **kwargs):
+        raise AssertionError("should not be called when unconfigured")
+
+
+class _StubLokiConfigured:
+    def is_configured(self) -> bool:
+        return True
+
+    async def search(self, **kwargs):
+        from datetime import datetime, timezone
+
+        from argus.providers.loki.models import LokiLogEntry
+
+        return [
+            LokiLogEntry(
+                timestamp=datetime.now(timezone.utc),
+                namespace=kwargs.get("namespace") or "",
+                pod=kwargs.get("pod") or "",
+                container="",
+                line="loki log line",
+            )
+        ]
+
+
 class _StubArgoCD:
     async def get_application(self, app_name):
         return None
@@ -62,7 +95,7 @@ class _StubDocumentation:
         return []
 
 
-def _build_service(epics=None, archiver=None, kubernetes=None) -> DiagnosticsService:
+def _build_service(epics=None, archiver=None, kubernetes=None, loki=None) -> DiagnosticsService:
     device_service = DeviceService(channelfinder=_StubChannelFinder(), cache=AsyncTTLCache(ttl=60))
     return DiagnosticsService(
         device_service=device_service,
@@ -72,6 +105,7 @@ def _build_service(epics=None, archiver=None, kubernetes=None) -> DiagnosticsSer
         argocd=_StubArgoCD(),
         logbook=_StubLogbook(),
         documentation=_StubDocumentation(),
+        loki=loki or _StubLokiUnconfigured(),
     )
 
 
@@ -80,13 +114,42 @@ async def test_diagnose_device_degrades_when_kubernetes_down():
     report = await service.diagnose_device("QF12", timeout=2)
 
     assert report.pod.status == "unavailable"
-    assert report.pod_logs.status == "skipped"  # device has no known pod_name to begin with
+    # Loki unconfigured -> pod_logs falls back to the kubectl tail, which is
+    # also down here, so it degrades too (not "skipped": the device DOES have
+    # a known pod_name, see _StubChannelFinder's k8sPod).
+    assert report.pod_logs.status == "unavailable"
     assert report.live_pvs.status == "ok"
     assert report.history.status == "ok"
     assert report.logbook.status == "ok"
     assert report.documentation.status == "ok"
     assert "pod" in report.degraded_providers
+    assert "pod_logs" in report.degraded_providers
     assert "live_pvs" not in report.degraded_providers
+
+
+async def test_diagnose_device_pod_logs_uses_loki_when_configured():
+    service = _build_service(loki=_StubLokiConfigured())
+    report = await service.diagnose_device("QF12", timeout=2)
+
+    # _StubKubernetesDown.get_pod_logs always raises -- if pod_logs came from
+    # kubectl instead of Loki, this would degrade instead of returning "ok".
+    assert report.pod_logs.status == "ok"
+    assert report.pod_logs.data[0].line == "loki log line"
+
+
+async def test_diagnose_device_pod_logs_falls_back_to_kubectl_without_loki():
+    class _KubernetesWithLogs:
+        async def get_pod_for_ioc(self, ioc_name, namespace):
+            return None
+
+        async def get_pod_logs(self, pod_name, namespace):
+            return "kubectl tail output"
+
+    service = _build_service(kubernetes=_KubernetesWithLogs(), loki=_StubLokiUnconfigured())
+    report = await service.diagnose_device("QF12", timeout=2)
+
+    assert report.pod_logs.status == "ok"
+    assert report.pod_logs.data == "kubectl tail output"
 
 
 async def test_diagnose_device_respects_per_provider_timeout():

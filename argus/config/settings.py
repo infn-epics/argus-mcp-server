@@ -63,6 +63,15 @@ class ElasticSettings(_ProviderSettings):
     default_index: str = Field(default="argus-logs", alias="ELASTIC_DEFAULT_INDEX")
 
 
+class LokiSettings(_ProviderSettings):
+    # Base URL of the platform's shared Loki instance, e.g.
+    # http://epik8s-platform-loki.logging.svc.cluster.local:3100 — pod log
+    # history (7-day retention, survives pod restarts), distinct from
+    # ElasticSettings above (a separate, control-critical log store).
+    base_url: str | None = Field(default=None, alias="LOKI_BASE_URL")
+    default_limit: int = Field(default=200, alias="LOKI_DEFAULT_LIMIT")
+
+
 class DocumentationSettings(_ProviderSettings):
     docs_path: str | None = Field(default=None, alias="DOCS_PATH")
     index_path: str | None = Field(default=None, alias="DOCS_INDEX_PATH")
@@ -136,6 +145,7 @@ class Settings(BaseSettings):
     saverestore: SaveRestoreSettings = Field(default_factory=SaveRestoreSettings)
     logbook: LogbookSettings = Field(default_factory=LogbookSettings)
     elastic: ElasticSettings = Field(default_factory=ElasticSettings)
+    loki: LokiSettings = Field(default_factory=LokiSettings)
     documentation: DocumentationSettings = Field(default_factory=DocumentationSettings)
     ragflow: RagflowSettings = Field(default_factory=RagflowSettings)
     github: GitHubSettings = Field(default_factory=GitHubSettings)

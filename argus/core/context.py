@@ -25,6 +25,7 @@ from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.git.github import GitHubProvider
 from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.providers.loki.loki import LokiProvider
 from argus.providers.saverestore.saverestore import SaveRestoreProvider
 from argus.services.beamline_inventory_service import BeamlineInventoryService
 from argus.services.device_service import DeviceService
@@ -48,6 +49,7 @@ class AppContext:
     argocd: ArgoCDProvider
     logbook: LogbookProvider
     elastic: ElasticsearchProvider
+    loki: LokiProvider
     documentation: DocumentationProvider
     github: GitHubProvider
     gitlab: GitLabProvider
@@ -79,6 +81,7 @@ class AppContext:
         argocd = ArgoCDProvider(settings.argocd)
         logbook = LogbookProvider(settings.logbook)
         elastic = ElasticsearchProvider(settings.elastic)
+        loki = LokiProvider(settings.loki)
         documentation: DocumentationProvider
         if settings.documentation_backend == "ragflow":
             documentation = RagflowDocumentationProvider(settings.ragflow)
@@ -102,6 +105,7 @@ class AppContext:
             argocd=argocd,
             logbook=logbook,
             documentation=documentation,
+            loki=loki,
         )
         operations_service = OperationsService(
             epics_ca=epics_ca,
@@ -112,7 +116,7 @@ class AppContext:
             procedures=ProcedureRegistry(),
             kubernetes_cache=kubernetes_cache,
         )
-        history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
+        history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic, loki=loki)
         documentation_service = DocumentationService(documentation=documentation)
         default_repos = [r.strip() for r in settings.git_default_repos.split(",") if r.strip()]
         knowledge_service = KnowledgeService(
@@ -131,6 +135,7 @@ class AppContext:
             argocd=argocd,
             logbook=logbook,
             elastic=elastic,
+            loki=loki,
             documentation=documentation,
             github=github,
             gitlab=gitlab,

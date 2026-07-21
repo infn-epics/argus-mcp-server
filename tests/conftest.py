@@ -15,6 +15,7 @@ from argus.config.settings import (
     GitLabSettings,
     KubernetesSettings,
     LogbookSettings,
+    LokiSettings,
     SaveRestoreSettings,
     Settings,
 )
@@ -32,6 +33,7 @@ from argus.providers.git.github import GitHubProvider
 from argus.providers.git.gitlab import GitLabProvider
 from argus.providers.kubernetes.kubernetes import KubernetesProvider
 from argus.providers.logbook.logbook import LogbookProvider
+from argus.providers.loki.loki import LokiProvider
 from argus.providers.saverestore.saverestore import SaveRestoreProvider
 from argus.services.device_service import DeviceService
 from argus.services.diagnostics_service import DiagnosticsService
@@ -102,6 +104,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
     argocd = ArgoCDProvider(ArgoCDSettings(_env_file=None))
     logbook = LogbookProvider(LogbookSettings(_env_file=None))
     elastic = ElasticsearchProvider(ElasticSettings(_env_file=None))
+    loki = LokiProvider(LokiSettings(_env_file=None))
     documentation = LocalTfidfDocumentationProvider(DocumentationSettings(_env_file=None))
     github = GitHubProvider(GitHubSettings(_env_file=None))
     gitlab = GitLabProvider(GitLabSettings(_env_file=None))
@@ -121,6 +124,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         argocd=argocd,
         logbook=logbook,
         documentation=documentation,
+        loki=loki,
     )
     operations_service = OperationsService(
         epics_ca=fake_epics,
@@ -131,7 +135,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         procedures=ProcedureRegistry(),
         kubernetes_cache=kubernetes_cache,
     )
-    history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic)
+    history_service = HistoryService(archiver=archiver, logbook=logbook, elastic=elastic, loki=loki)
     documentation_service = DocumentationService(documentation=documentation)
     knowledge_service = KnowledgeService(github=github, gitlab=gitlab, cache=knowledge_cache)
     beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
@@ -147,6 +151,7 @@ def app_context(fake_epics: FakeEpicsProvider, unconfigured_epics_pva: FakeEpics
         argocd=argocd,
         logbook=logbook,
         elastic=elastic,
+        loki=loki,
         documentation=documentation,
         github=github,
         gitlab=gitlab,

@@ -105,7 +105,8 @@ TOOLS = [
         name="diagnose_device",
         description=(
             "Full cross-system diagnostic report for a device: live PVs, history, pod, "
-            "pod logs, ArgoCD state, recent logbook entries, and documentation — one call."
+            "pod logs (Loki-backed 7-day history when configured, otherwise a live kubectl tail), "
+            "ArgoCD state, recent logbook entries, and documentation — one call."
         ),
         input_schema=_DEVICE_NAME_SCHEMA,
         handler=_diagnose_device,
