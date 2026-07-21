@@ -27,11 +27,13 @@ class KnowledgeService:
         github: GitHubProvider,
         gitlab: GitLabProvider,
         default_repos: list[str] | None = None,
+        default_ref: str = "HEAD",
         cache: AsyncTTLCache | None = None,
     ) -> None:
         self._github = github
         self._gitlab = gitlab
         self._default_repos = default_repos or []
+        self._default_ref = default_ref
         self._cache = cache or AsyncTTLCache(ttl=600.0)
 
     def _provider_for(self, repo: str) -> GitProvider:
@@ -59,8 +61,19 @@ class KnowledgeService:
             "repo was not given and no default repo is configured (GIT_DEFAULT_REPOS) - pass repo explicitly."
         )
 
-    async def get_file(self, repo: str | None, path: str, ref: str = "HEAD") -> FileContent:
+    def _resolve_ref(self, ref: str | None) -> str:
+        """A caller-passed "HEAD" (the documented convention for "current version",
+        see knowledge_tools.py) or an omitted ref both mean the same thing: read
+        whatever this beamline is actually deployed from (GIT_DEFAULT_REF), not
+        git's own literal HEAD (the repo's default branch) -- those differ for any
+        beamline pinned to a non-default branch."""
+        if ref and ref != "HEAD":
+            return ref
+        return self._default_ref
+
+    async def get_file(self, repo: str | None, path: str, ref: str | None = "HEAD") -> FileContent:
         repo = self._resolve_repo(repo)
+        ref = self._resolve_ref(ref)
         key = f"file:{repo}:{path}:{ref}"
         return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_file(repo, path, ref))
 

@@ -14,7 +14,13 @@ from argus.core.errors import ValidationError
 from argus.mcp_server.tools.registry import ToolDefinition
 from argus.services.beamline_inventory_service import DEFAULT_INVENTORY_PATH
 
-_REPO_URL_DESC = "A git URL, e.g. https://github.com/infn-epics/ioc-chart.git or https://baltig.infn.it/lnf-da-control/epik8s-btf.git"
+_REPO_URL_DESC = (
+    "Optional - defaults to this beamline's own configured repo (GIT_DEFAULT_REPOS) when omitted, "
+    "which is correct for almost every call. Only pass this to look at a *different* beamline's repo "
+    "instead - do not guess a URL from this beamline's name (repo naming isn't consistent, e.g. "
+    "epik8s-btf.git but epik8-sparc.git). A git URL, e.g. https://github.com/infn-epics/ioc-chart.git "
+    "or https://baltig.infn.it/lnf-da-control/epik8s-btf.git."
+)
 
 _LIST_DEVICES_SCHEMA = {
     "type": "object",
@@ -24,7 +30,14 @@ _LIST_DEVICES_SCHEMA = {
             "type": "string",
             "description": f"Path to the beamline's epik8s-style deploy YAML. Defaults to '{DEFAULT_INVENTORY_PATH}'.",
         },
-        "ref": {"type": "string", "description": "Git ref to read. Defaults to 'HEAD' (current)."},
+        "ref": {
+            "type": "string",
+            "description": (
+                "Git ref to read. Defaults to 'HEAD', which resolves to whatever branch this beamline is "
+                "actually deployed from (GIT_DEFAULT_REF) — not necessarily the repo's default branch. "
+                "Only pass this to look at a *different* ref (a specific tag/commit, or another branch)."
+            ),
+        },
         "devgroup": {
             "type": "string",
             "description": "Filter by device group, e.g. 'mag' (magnets), 'vac' (vacuum), 'mot' (motors), 'cam' (cameras), 'diag' (diagnostics).",
@@ -40,14 +53,14 @@ _LIST_DEVICES_SCHEMA = {
         },
         "zone": {"type": "string", "description": "Filter by zone, e.g. 'BTF1', 'BTF2', 'LINAC'."},
     },
-    "required": ["repo"],
+    "required": [],
 }
 
 
 async def _list_beamline_devices(arguments: dict[str, Any], ctx: AppContext) -> dict[str, Any]:
     repo = arguments.get("repo")
-    if not repo or not isinstance(repo, str):
-        raise ValidationError("repo cannot be empty and must be a string.")
+    if repo is not None and not isinstance(repo, str):
+        raise ValidationError("repo must be a string.")
 
     devices = await ctx.beamline_inventory_service.list_devices(
         repo,
@@ -70,8 +83,11 @@ TOOLS = [
             "zone'. This is the main source of information: it is on the YAML, not in PV search. Do not "
             "call search_pvs or beamline_status first and do not retry them repeatedly hoping for a "
             "different result — if the question is about what exists rather than a live PV value, call "
-            "this tool first, once. Returns the beamline's device inventory parsed from its epik8s-style "
-            "deploy YAML, with iocDefaults template values already merged in — many IOCs only declare a "
+            "this tool first, once. repo is optional and defaults to THIS beamline's own configured repo "
+            "— call with no repo argument for 'this beamline's own devices', which is almost always what's "
+            "wanted; never guess a repo URL from the beamline's name, only pass repo explicitly to look at "
+            "a *different* beamline's inventory. Returns the beamline's device inventory parsed from its "
+            "epik8s-style deploy YAML, with iocDefaults template values already merged in — many IOCs only declare a "
             "'template' and inherit devgroup/devtype from iocDefaults[template] rather than setting it "
             "directly, so reading the raw file yourself and grep-ing for devgroup will undercount. Each "
             "device also gets a devfunc classification within its devgroup (e.g. QUA/COR/DIP/SOL within "

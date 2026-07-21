@@ -89,7 +89,7 @@ class BeamlineInventoryService:
 
     async def list_devices(
         self,
-        repo: str,
+        repo: str | None,
         path: str = DEFAULT_INVENTORY_PATH,
         ref: str = "HEAD",
         devgroup: str | None = None,

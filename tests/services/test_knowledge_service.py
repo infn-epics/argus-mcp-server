@@ -22,6 +22,12 @@ class _FakeGitHub(GitHubProvider):
         self.calls.append(("search", repo, query))
         return [Issue(id="1", repo=repo, title="gh issue", state="open", url="https://x")]
 
+    async def get_file(self, repo, path, ref="HEAD"):
+        from argus.providers.git.models import FileContent
+
+        self.calls.append(("file", repo, path, ref))
+        return FileContent(repo=repo, path=path, ref=ref, content="content", sha="filesha")
+
 
 class _FakeGitLab(GitLabProvider):
     def __init__(self):
@@ -124,3 +130,37 @@ async def test_get_commit_diff_without_repo_or_default_raises_validation_error(g
     service = KnowledgeService(github=github, gitlab=gitlab)
     with pytest.raises(ValidationError):
         await service.get_commit_diff(None, "abc123")
+
+
+async def test_get_file_head_resolves_to_configured_default_ref(github, gitlab):
+    # A beamline deployed from a non-default branch (e.g. euaps's "devel") must not
+    # silently read its repo's actual default branch when the caller passes "HEAD" -
+    # that's the documented convention for "current version", not git's own HEAD.
+    service = KnowledgeService(
+        github=github, gitlab=gitlab, default_repos=["https://github.com/x/y.git"], default_ref="devel"
+    )
+    await service.get_file(None, "deploy/values.yaml", "HEAD")
+    assert github.calls[0] == ("file", "https://github.com/x/y.git", "deploy/values.yaml", "devel")
+
+
+async def test_get_file_omitted_ref_resolves_to_configured_default_ref(github, gitlab):
+    service = KnowledgeService(
+        github=github, gitlab=gitlab, default_repos=["https://github.com/x/y.git"], default_ref="devel"
+    )
+    await service.get_file(None, "deploy/values.yaml", None)
+    assert github.calls[0] == ("file", "https://github.com/x/y.git", "deploy/values.yaml", "devel")
+
+
+async def test_get_file_explicit_non_head_ref_is_used_as_is(github, gitlab):
+    service = KnowledgeService(
+        github=github, gitlab=gitlab, default_repos=["https://github.com/x/y.git"], default_ref="devel"
+    )
+    await service.get_file(None, "deploy/values.yaml", "v1.2.3")
+    assert github.calls[0] == ("file", "https://github.com/x/y.git", "deploy/values.yaml", "v1.2.3")
+
+
+async def test_get_file_head_without_configured_default_ref_stays_head(github, gitlab):
+    # Backward compatible: no GIT_DEFAULT_REF configured -> literal git HEAD, same as before.
+    service = KnowledgeService(github=github, gitlab=gitlab, default_repos=["https://github.com/x/y.git"])
+    await service.get_file(None, "deploy/values.yaml", "HEAD")
+    assert github.calls[0] == ("file", "https://github.com/x/y.git", "deploy/values.yaml", "HEAD")

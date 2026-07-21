@@ -132,6 +132,13 @@ class Settings(BaseSettings):
     # caller doesn't specify a repo list explicitly.
     git_default_repos: str = Field(default="", alias="GIT_DEFAULT_REPOS")
 
+    # Git ref (branch/tag) get_file/get_config_history/list_beamline_devices
+    # resolve a caller-passed "HEAD" (or an omitted ref) to, instead of git's
+    # own bare "HEAD" meaning -- a beamline isn't always deployed from its
+    # repo's default branch (e.g. "devel" instead of "main"), so literal
+    # "HEAD" can silently read the wrong branch's config.
+    git_default_ref: str = Field(default="HEAD", alias="GIT_DEFAULT_REF")
+
     # Which DocumentationProvider backs search_documentation. "ragflow"
     # requires ragflow.base_url + ragflow.api_key; falls back to local
     # TF-IDF behavior either way if ragflow isn't actually configured.

@@ -64,9 +64,13 @@ _CONFIG_HISTORY_SCHEMA = {
             "type": "string",
             "description": (
                 "If given (e.g. 'HEAD' for the current version, or a branch/tag/commit sha), return the "
-                "file's full content at that ref instead of its commit history. Use this to read the "
-                "current beamline inventory (IOCs, devices, zones, geo, devgroup/devtype, connection IPs) "
-                "straight out of a config file like deploy/values.yaml."
+                "file's full content at that ref instead of its commit history. 'HEAD' resolves to "
+                "whatever branch this beamline is actually deployed from (GIT_DEFAULT_REF) — not "
+                "necessarily the repo's default branch, some beamlines deploy from a non-default one — "
+                "so it's always safe to pass literally 'HEAD' for 'the current deployed config', never "
+                "guess a branch name. Use this to read the current beamline inventory (IOCs, devices, "
+                "zones, geo, devgroup/devtype, connection IPs) straight out of a config file like "
+                "deploy/values.yaml."
             ),
         },
     },

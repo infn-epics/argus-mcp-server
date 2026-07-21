@@ -120,7 +120,11 @@ class AppContext:
         documentation_service = DocumentationService(documentation=documentation)
         default_repos = [r.strip() for r in settings.git_default_repos.split(",") if r.strip()]
         knowledge_service = KnowledgeService(
-            github=github, gitlab=gitlab, default_repos=default_repos, cache=knowledge_cache
+            github=github,
+            gitlab=gitlab,
+            default_repos=default_repos,
+            default_ref=settings.git_default_ref,
+            cache=knowledge_cache,
         )
         beamline_inventory_service = BeamlineInventoryService(knowledge=knowledge_service)
         saverestore_service = SaveRestoreService(saverestore=saverestore)

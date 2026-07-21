@@ -63,12 +63,41 @@ async def test_list_beamline_devices_classifies_magnets(app_context: AppContext)
     assert payload["devices"][0]["devfunc"] == "QUA"
 
 
-async def test_list_beamline_devices_missing_repo_returns_validation_error(app_context):
+async def test_list_beamline_devices_missing_repo_without_default_returns_validation_error(app_context):
+    # No repo argument AND no GIT_DEFAULT_REPOS configured (app_context's default) -- still a clean
+    # validation_error, just raised by KnowledgeService._resolve_repo now instead of the tool handler.
     registry = build_registry()
     response = await registry.dispatch("list_beamline_devices", {}, app_context)
     payload = json.loads(response[0].text)
     assert payload["status"] == "error"
     assert payload["code"] == "validation_error"
+
+
+@respx.mock
+async def test_list_beamline_devices_missing_repo_uses_configured_default(app_context: AppContext):
+    configured_github = GitHubProvider(GitHubSettings(_env_file=None, GITHUB_TOKEN="ghp_test"))
+    knowledge_service = KnowledgeService(
+        github=configured_github,
+        gitlab=app_context.gitlab,
+        default_repos=["https://github.com/infn-epics/epik8s-btf.git"],
+    )
+    ctx = AppContext(
+        **{
+            **app_context.__dict__,
+            "github": configured_github,
+            "knowledge_service": knowledge_service,
+            "beamline_inventory_service": BeamlineInventoryService(knowledge=knowledge_service),
+        }
+    )
+    encoded = base64.b64encode(_YAML.encode()).decode()
+    respx.get("https://api.github.com/repos/infn-epics/epik8s-btf/contents/deploy/values.yaml").mock(
+        return_value=httpx.Response(200, json={"content": encoded, "encoding": "base64", "sha": "abc123"})
+    )
+    registry = build_registry()
+    response = await registry.dispatch("list_beamline_devices", {"devgroup": "mag"}, ctx)
+    payload = json.loads(response[0].text)
+    assert payload["status"] == "success"
+    assert payload["device_count"] == 2  # both devices inherit devgroup=mag from the danfysik template
 
 
 async def test_list_beamline_devices_unconfigured_repo_returns_structured_error(app_context):
