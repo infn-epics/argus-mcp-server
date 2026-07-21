@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from argus.core.cache import AsyncTTLCache
+from argus.core.errors import ValidationError
 from argus.core.models import gather_with_timeout
 from argus.providers.git.exceptions import UnsupportedGitHostError
 from argus.providers.git.github import GitHubProvider
@@ -45,15 +46,31 @@ class KnowledgeService:
             "add a GitLab base URL for this host, or this repo can't be reached."
         )
 
-    async def get_file(self, repo: str, path: str, ref: str = "HEAD") -> FileContent:
+    def _resolve_repo(self, repo: str | None) -> str:
+        """Same "fall back to the configured default" behavior search_knowledge_base
+        already had — a single-repo caller (get_file/get_config_history/get_commit_diff)
+        almost always means "this beamline's own repo" (GIT_DEFAULT_REPOS), not a repo
+        the caller has to already know the URL of."""
+        if repo:
+            return repo
+        if self._default_repos:
+            return self._default_repos[0]
+        raise ValidationError(
+            "repo was not given and no default repo is configured (GIT_DEFAULT_REPOS) - pass repo explicitly."
+        )
+
+    async def get_file(self, repo: str | None, path: str, ref: str = "HEAD") -> FileContent:
+        repo = self._resolve_repo(repo)
         key = f"file:{repo}:{path}:{ref}"
         return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_file(repo, path, ref))
 
-    async def get_config_history(self, repo: str, path: str, limit: int = 20) -> list[CommitInfo]:
+    async def get_config_history(self, repo: str | None, path: str, limit: int = 20) -> list[CommitInfo]:
+        repo = self._resolve_repo(repo)
         key = f"history:{repo}:{path}:{limit}"
         return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_history(repo, path, limit))
 
-    async def get_commit_diff(self, repo: str, sha: str) -> list[FileDiff]:
+    async def get_commit_diff(self, repo: str | None, sha: str) -> list[FileDiff]:
+        repo = self._resolve_repo(repo)
         # A commit's diff is immutable once it exists -- caching it is always safe.
         key = f"diff:{repo}:{sha}"
         return await self._cache.get_or_set(key, lambda: self._provider_for(repo).get_commit_diff(repo, sha))
