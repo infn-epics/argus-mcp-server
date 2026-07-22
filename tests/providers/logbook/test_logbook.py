@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import httpx
 import pytest
 import respx
@@ -54,6 +56,23 @@ async def test_search_entries_sends_text_param_not_search():
     sent_params = dict(route.calls.last.request.url.params)
     assert sent_params["text"] == "QF12"
     assert "search" not in sent_params
+
+
+@respx.mock
+async def test_search_entries_sends_since_as_iso_instant_with_z_suffix():
+    # phoebus-olog's server-side TimestampFormats.parse() (confirmed by reading
+    # phoebus/core/util TimestampFormats.java) only accepts space-separated
+    # patterns or strict ISO_INSTANT ending in literal "Z" -- a numeric "+00:00"
+    # offset (Python's datetime.isoformat() default) is rejected with 400
+    # "Invalid start and end times". Regression test for that exact bug.
+    provider = _configured()
+    route = respx.get("http://olog.test/Olog/logs").mock(return_value=httpx.Response(200, json=[]))
+    since = datetime(2026, 7, 15, 14, 56, 42, 900935, tzinfo=timezone.utc)
+    await provider.search_entries(text="QF12", since=since)
+
+    sent_params = dict(route.calls.last.request.url.params)
+    assert sent_params["start"] == "2026-07-15T14:56:42.900935Z"
+    assert "+00:00" not in sent_params["start"]
 
 
 @respx.mock

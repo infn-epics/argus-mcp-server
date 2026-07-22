@@ -7,7 +7,7 @@ against olog-API-compatible forks.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import ClassVar
 
 import httpx
@@ -80,7 +80,15 @@ class LogbookProvider:
             # was never actually filtering by it.
             params["text"] = text
         if since:
-            params["start"] = since.isoformat()
+            # phoebus-olog's TimestampFormats.parse() (server-side) only accepts
+            # space-separated "yyyy-MM-dd HH:mm:ss.SSS"-style patterns or strict
+            # DateTimeFormatter.ISO_INSTANT, which requires a literal "Z" suffix
+            # -- confirmed by reading phoebus/core/util TimestampFormats.java's
+            # absolute_parsers list, none of which accept a numeric UTC offset.
+            # Python's datetime.isoformat() always emits "+00:00" for a UTC-aware
+            # datetime, never "Z", so every start= query was rejected server-side
+            # with "Invalid start and end times" (400) until now.
+            params["start"] = since.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
         url = f"{self._settings.base_url}/Olog/logs"
         try:
