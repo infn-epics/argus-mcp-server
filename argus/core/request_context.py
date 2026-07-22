@@ -17,17 +17,23 @@ def new_request_id() -> str:
 
 
 @contextmanager
-def request_scope(request_id: str | None = None) -> Iterator[str]:
-    """Bind a request id to the current context and to structlog's contextvars.
+def request_scope(request_id: str | None = None, extra: dict[str, str] | None = None) -> Iterator[str]:
+    """Bind a request id (and optional extra fields) to the current context and
+    to structlog's contextvars.
 
     Every log line emitted while inside this scope (including provider_call
-    events logged deep in gather_with_timeout) automatically carries request_id.
+    events logged deep in gather_with_timeout) automatically carries request_id
+    and whatever ``extra`` was passed — e.g. LibreChat's conversation_id/
+    message_id/user_id, when the MCP call carried them as headers (see
+    mcp_server/server.py's handle_call_tool), so a Loki query for one bad-rated
+    conversation shows every tool-call log line it triggered.
     """
     rid = request_id or new_request_id()
     token = request_id_var.set(rid)
-    structlog.contextvars.bind_contextvars(request_id=rid)
+    bound = {"request_id": rid, **(extra or {})}
+    structlog.contextvars.bind_contextvars(**bound)
     try:
         yield rid
     finally:
         request_id_var.reset(token)
-        structlog.contextvars.unbind_contextvars("request_id")
+        structlog.contextvars.unbind_contextvars(*bound.keys())

@@ -53,12 +53,19 @@ class ToolRegistry:
     def list_tools(self) -> list[Tool]:
         return [tool.as_mcp_tool() for tool in self._tools.values()]
 
-    async def dispatch(self, name: str, arguments: dict[str, Any], ctx: AppContext) -> list[TextContent]:
+    async def dispatch(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        ctx: AppContext,
+        *,
+        correlation: dict[str, str] | None = None,
+    ) -> list[TextContent]:
         tool = self._tools.get(name)
         if tool is None:
             return [_error_response("unknown_tool", f"Unknown tool: {name}")]
 
-        with request_scope():
+        with request_scope(extra=correlation):
             structlog.contextvars.bind_contextvars(tool=name)
             try:
                 result = await tool.handler(arguments, ctx)

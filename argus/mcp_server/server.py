@@ -16,6 +16,7 @@ from argus.__about__ import __version__
 from argus.config.logging import configure_logging
 from argus.config.settings import Settings
 from argus.core.context import AppContext
+from argus.mcp_server.correlation import current_http_request, extract_correlation_headers
 from argus.mcp_server.tools.beamline_tools import TOOLS as BEAMLINE_TOOLS
 from argus.mcp_server.tools.device_tools import TOOLS as DEVICE_TOOLS
 from argus.mcp_server.tools.docs_tools import TOOLS as DOCS_TOOLS
@@ -58,7 +59,8 @@ def build_mcp_server(registry: ToolRegistry, ctx: AppContext) -> Server:
 
     @server.call_tool()
     async def handle_call_tool(name: str, arguments: dict) -> Sequence[TextContent]:
-        return await registry.dispatch(name, arguments or {}, ctx)
+        correlation = extract_correlation_headers(current_http_request(server))
+        return await registry.dispatch(name, arguments or {}, ctx, correlation=correlation)
 
     return server
 
