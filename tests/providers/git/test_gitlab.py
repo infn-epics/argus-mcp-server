@@ -21,6 +21,24 @@ async def test_unconfigured_raises_clean_error():
 
 
 @respx.mock
+async def test_public_repository_can_be_read_without_token():
+    provider = GitLabProvider(GitLabSettings(_env_file=None, GITLAB_BASE_URL="https://baltig.infn.it"))
+    assert provider.is_configured() is True
+    encoded = base64.b64encode(b"beamline: BTF").decode()
+    route = respx.get(
+        "https://baltig.infn.it/api/v4/projects/lnf-da-control%2Fepik8s-btf/repository/files/deploy%2Fvalues.yaml"
+    ).mock(return_value=httpx.Response(200, json={"content": encoded, "blob_id": "public"}))
+
+    result = await provider.get_file(
+        "https://baltig.infn.it/lnf-da-control/epik8s-btf.git",
+        "deploy/values.yaml",
+    )
+
+    assert result.content == "beamline: BTF"
+    assert "PRIVATE-TOKEN" not in route.calls[0].request.headers
+
+
+@respx.mock
 async def test_get_file_decodes_base64_content():
     provider = _configured()
     encoded = base64.b64encode(b"beamline: BTF").decode()

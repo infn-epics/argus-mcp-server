@@ -14,10 +14,25 @@ def _configured() -> GitHubProvider:
 
 
 async def test_unconfigured_raises_clean_error():
-    provider = GitHubProvider(GitHubSettings(_env_file=None))
+    provider = GitHubProvider(GitHubSettings(_env_file=None, GITHUB_BASE_URL=""))
     assert provider.is_configured() is False
     with pytest.raises(GitHubUnconfiguredError):
         await provider.get_file("https://github.com/infn-epics/ioc-chart.git", "README.md")
+
+
+@respx.mock
+async def test_public_repository_can_be_read_without_token():
+    provider = GitHubProvider(GitHubSettings(_env_file=None))
+    assert provider.is_configured() is True
+    encoded = base64.b64encode(b"public inventory").decode()
+    route = respx.get("https://api.github.com/repos/infn-epics/ioc-chart/contents/README.md").mock(
+        return_value=httpx.Response(200, json={"content": encoded, "sha": "public"})
+    )
+
+    result = await provider.get_file("https://github.com/infn-epics/ioc-chart.git", "README.md")
+
+    assert result.content == "public inventory"
+    assert "Authorization" not in route.calls[0].request.headers
 
 
 @respx.mock

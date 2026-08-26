@@ -30,14 +30,19 @@ class GitHubProvider:
         self._settings = settings
 
     def is_configured(self) -> bool:
-        return bool(self._settings.token)
+        # GitHub's read APIs allow anonymous access to public repositories.
+        # A token remains useful for private repositories and higher rate
+        # limits, but it is not a prerequisite for inventory reads.
+        return bool(self._settings.base_url)
 
     def _headers(self) -> dict[str, str]:
-        return {
-            "Authorization": f"Bearer {self._settings.token}",
+        headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
+        if self._settings.token:
+            headers["Authorization"] = f"Bearer {self._settings.token}"
+        return headers
 
     async def health(self) -> ProviderHealth:
         if not self.is_configured():
@@ -53,7 +58,7 @@ class GitHubProvider:
 
     def _require_configured(self) -> None:
         if not self.is_configured():
-            raise GitHubUnconfiguredError("GitHub is not configured (set GITHUB_TOKEN).")
+            raise GitHubUnconfiguredError("GitHub is not configured (set GITHUB_BASE_URL).")
 
     async def get_file(self, repo: str, path: str, ref: str = "HEAD", *, timeout: float = 5.0) -> FileContent:
         self._require_configured()

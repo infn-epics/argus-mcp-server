@@ -31,14 +31,19 @@ class GitLabProvider:
         self._settings = settings
 
     def is_configured(self) -> bool:
-        return bool(self._settings.base_url and self._settings.token)
+        # GitLab's read APIs allow anonymous access to public projects. A
+        # token is optional and is only needed for private repositories or
+        # instances that disable anonymous reads.
+        return bool(self._settings.base_url)
 
     @property
     def base_url(self) -> str | None:
         return self._settings.base_url
 
     def _headers(self) -> dict[str, str]:
-        return {"PRIVATE-TOKEN": self._settings.token or ""}
+        if not self._settings.token:
+            return {}
+        return {"PRIVATE-TOKEN": self._settings.token}
 
     async def health(self) -> ProviderHealth:
         if not self.is_configured():
@@ -54,7 +59,7 @@ class GitLabProvider:
 
     def _require_configured(self) -> None:
         if not self.is_configured():
-            raise GitLabUnconfiguredError("GitLab is not configured (set GITLAB_BASE_URL and GITLAB_TOKEN).")
+            raise GitLabUnconfiguredError("GitLab is not configured (set GITLAB_BASE_URL).")
 
     async def get_file(self, repo: str, path: str, ref: str = "HEAD", *, timeout: float = 5.0) -> FileContent:
         self._require_configured()

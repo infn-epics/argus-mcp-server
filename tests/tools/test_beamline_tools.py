@@ -44,6 +44,19 @@ def _configured_context(app_context: AppContext) -> AppContext:
     )
 
 
+def _disabled_github_context(app_context: AppContext) -> AppContext:
+    disabled_github = GitHubProvider(GitHubSettings(_env_file=None, GITHUB_BASE_URL=""))
+    knowledge_service = KnowledgeService(github=disabled_github, gitlab=app_context.gitlab)
+    return AppContext(
+        **{
+            **app_context.__dict__,
+            "github": disabled_github,
+            "knowledge_service": knowledge_service,
+            "beamline_inventory_service": BeamlineInventoryService(knowledge=knowledge_service),
+        }
+    )
+
+
 @respx.mock
 async def test_list_beamline_devices_classifies_magnets(app_context: AppContext):
     encoded = base64.b64encode(_YAML.encode()).decode()
@@ -105,7 +118,7 @@ async def test_list_beamline_devices_unconfigured_repo_returns_structured_error(
     response = await registry.dispatch(
         "list_beamline_devices",
         {"repo": "https://github.com/infn-epics/epik8s-btf.git"},
-        app_context,
+        _disabled_github_context(app_context),
     )
     payload = json.loads(response[0].text)
     assert payload["status"] == "error"

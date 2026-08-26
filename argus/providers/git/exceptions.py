@@ -48,6 +48,6 @@ class GitLabNotFoundError(GitLabError):
 
 
 class UnsupportedGitHostError(GitError):
-    """Raised when a repo URL's host doesn't match github.com or the configured GitLab host."""
+    """Raised when no provider adapter is configured for a repository host."""
 
     code = "unsupported_git_host"

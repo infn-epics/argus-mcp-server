@@ -44,8 +44,9 @@ class KnowledgeService:
         if gitlab_host and host == gitlab_host:
             return self._gitlab
         raise UnsupportedGitHostError(
-            f"'{host}' is not github.com and doesn't match the configured GitLab host — "
-            "add a GitLab base URL for this host, or this repo can't be reached."
+            f"No Git provider is configured for host '{host}'. Supported providers are "
+            "GitHub and the host selected by GITLAB_BASE_URL; other Git services require "
+            "a provider adapter."
         )
 
     def _resolve_repo(self, repo: str | None) -> str:

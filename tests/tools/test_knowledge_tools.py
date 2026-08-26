@@ -11,6 +11,17 @@ from argus.providers.git.github import GitHubProvider
 from argus.services.knowledge_service import KnowledgeService
 
 
+def _disabled_github_context(app_context: AppContext) -> AppContext:
+    disabled_github = GitHubProvider(GitHubSettings(_env_file=None, GITHUB_BASE_URL=""))
+    return AppContext(
+        **{
+            **app_context.__dict__,
+            "github": disabled_github,
+            "knowledge_service": KnowledgeService(github=disabled_github, gitlab=app_context.gitlab),
+        }
+    )
+
+
 async def test_search_knowledge_base_without_repos_returns_empty_list(app_context):
     registry = build_registry()
     response = await registry.dispatch("search_knowledge_base", {"query": "magnet interlock"}, app_context)
@@ -31,7 +42,7 @@ async def test_get_config_history_unconfigured_repo_returns_structured_error(app
     response = await registry.dispatch(
         "get_config_history",
         {"repo": "https://github.com/infn-epics/ioc-chart.git", "path": "values.yaml"},
-        app_context,
+        _disabled_github_context(app_context),
     )
     payload = json.loads(response[0].text)
     assert payload["status"] == "error"
@@ -82,11 +93,13 @@ async def test_get_config_history_with_ref_returns_file_content(app_context: App
 
 async def test_get_config_history_missing_path_defaults_to_deploy_values_yaml(app_context):
     # No "path" given - should default to deploy/values.yaml and proceed all the way to
-    # the provider (which then fails on the *unrelated*, pre-existing "no GITHUB_TOKEN"
-    # condition) rather than bailing out on a validation error for the omitted path.
+    # the explicitly disabled provider rather than bailing out on a validation error
+    # for the omitted path.
     registry = build_registry()
     response = await registry.dispatch(
-        "get_config_history", {"repo": "https://github.com/infn-epics/ioc-chart.git"}, app_context
+        "get_config_history",
+        {"repo": "https://github.com/infn-epics/ioc-chart.git"},
+        _disabled_github_context(app_context),
     )
     payload = json.loads(response[0].text)
     assert payload["status"] == "error"
