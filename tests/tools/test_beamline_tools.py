@@ -30,6 +30,30 @@ epicsConfiguration:
           geo: 29
 """
 
+# Real epik8s beamline repos (epik8s-btf, epik8-sparc, epik8s-euaps) key
+# `epicsConfiguration.iocs` by IOC name (a mapping), not a list like _YAML
+# above - unlike this module's own fixture. Regression coverage for the
+# AttributeError this caused when iterated as a list.
+_YAML_IOCS_AS_MAP = """
+iocDefaults:
+  danfysik:
+    devtype: sys8x00
+    devgroup: mag
+
+epicsConfiguration:
+  iocs:
+    danfysik-1:
+      name: "danfysik-1"
+      iocprefix: "BTF:MAG:DANFYSIK"
+      template: "danfysik"
+      zones: TL
+      devices:
+        - name: QUATM002
+          geo: 53
+        - name: DHRTB101
+          geo: 29
+"""
+
 
 def _configured_context(app_context: AppContext) -> AppContext:
     configured_github = GitHubProvider(GitHubSettings(_env_file=None, GITHUB_TOKEN="ghp_test"))
@@ -60,6 +84,25 @@ def _disabled_github_context(app_context: AppContext) -> AppContext:
 @respx.mock
 async def test_list_beamline_devices_classifies_magnets(app_context: AppContext):
     encoded = base64.b64encode(_YAML.encode()).decode()
+    respx.get("https://api.github.com/repos/infn-epics/epik8s-btf/contents/deploy/values.yaml").mock(
+        return_value=httpx.Response(200, json={"content": encoded, "encoding": "base64", "sha": "abc123"})
+    )
+    registry = build_registry()
+    response = await registry.dispatch(
+        "list_beamline_devices",
+        {"repo": "https://github.com/infn-epics/epik8s-btf.git", "devgroup": "mag", "devfunc": "QUA"},
+        _configured_context(app_context),
+    )
+    payload = json.loads(response[0].text)
+    assert payload["status"] == "success"
+    assert payload["device_count"] == 1
+    assert payload["devices"][0]["name"] == "QUATM002"
+    assert payload["devices"][0]["devfunc"] == "QUA"
+
+
+@respx.mock
+async def test_list_beamline_devices_classifies_magnets_when_iocs_is_a_map(app_context: AppContext):
+    encoded = base64.b64encode(_YAML_IOCS_AS_MAP.encode()).decode()
     respx.get("https://api.github.com/repos/infn-epics/epik8s-btf/contents/deploy/values.yaml").mock(
         return_value=httpx.Response(200, json={"content": encoded, "encoding": "base64", "sha": "abc123"})
     )

@@ -104,6 +104,14 @@ class BeamlineInventoryService:
 
         ioc_defaults = data.get("iocDefaults") or {}
         iocs = ((data.get("epicsConfiguration") or {}).get("iocs")) or []
+        # epik8s deploy YAMLs key iocs by IOC name (a dict), not a list - every
+        # real beamline repo (epik8s-btf, epik8-sparc, epik8s-euaps) uses this
+        # form, unlike the list form used in this module's own tests. Iterating
+        # a dict directly yields its string keys, not the IOC mappings, which
+        # crashed _merge_ioc_defaults()'s `ioc.get(...)` with an unhandled
+        # AttributeError on every real deployment.
+        if isinstance(iocs, dict):
+            iocs = list(iocs.values())
 
         devices: list[BeamlineDevice] = []
         for raw_ioc in iocs:
